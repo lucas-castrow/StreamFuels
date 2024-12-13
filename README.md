@@ -2,6 +2,13 @@
 
 Cisia is a collection of implementations designed to assist researchers with newly developed papers, both from our own team and other outstanding scientific papers.
 
+sales_monthly_state(): monthly fuel sales data by state from the ANP database
+    
+sales_yearly_state(): yearly fuel sales data by state from ANP database
+
+sales_yearly_city(): yearly fuel sales data by city from ANP database
+
+
 ## Installation
 
 ```bash

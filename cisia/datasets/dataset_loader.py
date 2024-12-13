@@ -4,7 +4,15 @@ from .transform import *
 from distutils.util import strtobool
 from datetime import datetime
 class DatasetLoader:
-    """Handle datasets provided by CISIA"""
+    """ Handle datasets provided by CISIA
+    
+    sales_monthly_state(): monthly fuel sales data by state from the ANP database
+    
+    sales_yearly_state(): yearly fuel sales data by state from ANP database
+    
+    sales_yearly_city(): yearly fuel sales data by city from ANP database
+    
+    """
 
     @staticmethod
     def sales_monthly_state(download_path='./', data_prepared=True):
