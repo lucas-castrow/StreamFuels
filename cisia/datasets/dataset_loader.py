@@ -270,10 +270,10 @@ class DatasetLoader:
 
             return (
                 loaded_data,
-                frequency,
-                forecast_horizon,
-                contain_missing_values,
-                contain_equal_length,
+               {"frequency":frequency,
+                "horizon":forecast_horizon,
+                "missing_values":contain_missing_values,
+                "equal_length":contain_equal_length}
             )
 
                 

@@ -29,5 +29,5 @@ from cisia.datasets import DatasetLoader
 loader = DatasetLoader()
 result, flag = loader.sales_yearly_state()
 
-df, frequency, horizon, contain_missing_values, contain_equal_length  = loader.read_tsf(path_tsf=result)
+df, metadata = loader.read_tsf(path_tsf=result)
 
