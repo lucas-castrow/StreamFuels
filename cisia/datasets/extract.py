@@ -88,7 +88,113 @@ def scrapping_venda_url(soup, fuel_type, location_type):
                                             
 
     return list_urls, file_name
-def scrape_for_file_links(url, transaction_type, fuel_type, location_type):
+
+
+def scrapping_sales_monthly_state(soup):
+    list_urls = []    
+    file_names = []
+    header = soup.find(lambda tag: tag.name in ["h1", "h2", "h3", "h4", "h5", "h6"] and "Vendas de derivados de petróleo e etanol" in tag.text)
+    if header:
+        list_element = header.find_next("ul") or header.find_next("ol")
+        list_items = list_element.find_all("li")
+        for li_tag in list_items:
+            a_tag = li_tag.find('a')
+            if a_tag and "Vendas de derivados petróleo e etanol" in a_tag.get_text():
+                if a_tag['href'].endswith('.csv'):
+                    link = a_tag['href']
+                    
+                    span_tag = li_tag.find('span')
+                    updated_at = span_tag.get_text() if span_tag else None
+                    list_urls.append(link)
+                    file_names.append(f'sales_monthly_state_{updated_at}')
+                    
+                    return list_urls, file_names
+        
+    # for li_tag in soup.find_all('li'):
+    #     a_tag = li_tag.find('a')
+        
+    #     if a_tag and "Vendas de derivados petróleo e etanol" in a_tag.get_text():
+    #         if a_tag['href'].endswith('.csv'):
+    #             link = a_tag['href']
+                
+    #             span_tag = li_tag.find('span')
+    #             updated_at = span_tag.get_text() if span_tag else None
+    #             list_urls.append(link)
+    #             file_name = f'sales_monthly_state_{updated_at}' 
+                    
+    return list_urls, file_names
+
+def scrapping_sales_yearly_state(soup):
+    list_urls = []    
+    file_names = []
+
+    header = soup.find(lambda tag: tag.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] and 
+                   'Vendas anuais de etanol hidratado e derivados de petróleo por estado (dados históricos)' in tag.text)
+
+    if header:
+        csv_links = header.find_all_next('a', href=True)
+
+        list_urls = [link['href'] for link in csv_links if link['href'].endswith('.csv')]
+        # file_names = [url.split("/")[-1].replace(".csv", "") for url in list_urls]
+        for url in list_urls:
+            filename = url.split("/")[-1].replace(".csv", "")
+            seps = filename.split("-")
+            anos = "-".join(seps[-2:])
+            filename = "_".join(seps[0:-2])
+
+            filename = filename+"_"+anos
+            file_names.append(filename)
+        return list_urls, file_names
+        
+
+def scrapping_sales_yearly_city(soup):
+    h3_tags = soup.find_all('h3')
+    list_urls = []    
+    # Loop through each <h3> tag found
+    padrao_data = r'\d{2}/\d{2}/\d{4}'
+    file_names = []
+    for h3 in h3_tags:
+            # Find all <ul> tags that are after the <h3> tag
+            ul_tags = h3.find_all_next('ul')
+            for ul_tag in ul_tags:
+                if ul_tag:
+                    # Loop through all <li> tags in the <ul>
+                    for li in ul_tag.find_all('li'):
+                        # Look for <b> tags inside each <li>
+                        b_tag = li.find('b')
+                        if b_tag:
+                            # Now, find the next <ul> tag after the current <ul> and search for <a> with .csv link
+                            next_ul = ul_tag.find_next('ul')
+                            # print(next_ul)
+                            if next_ul:
+                                # Look for all <a> tags in the next <ul> with .csv in the href
+                                a_tags = next_ul.find_all('a', href=True)
+                                li_tags = next_ul.find_all('li')
+                                # print(li_tags[1].text)
+                                for index, a_tag in enumerate(a_tags):
+                                    # print(a_tag)
+                                    if a_tag and a_tag['href'].endswith('.csv'):
+                                        link_csv = a_tag['href']
+                                        # se for municipio pega correto o anual
+                                        if "municipio" in link_csv:
+                                            derivado = (link_csv.split("/")[-2]).replace("-","")
+                                            updated_at = re.findall(padrao_data, li_tags[index].text)[0]
+                                            file_names.append(f'sales_yearly_city_{derivado}_{updated_at}')
+                                            list_urls.append(link_csv) 
+
+            return list_urls, file_names
+
+def scrapping_production_monthly(soup):
+    h3_tags = soup.find_all('h3')
+    list_urls = []    
+    # Loop through each <h3> tag found
+    padrao_data = r'\d{2}/\d{2}/\d{4}'
+    file_names = []
+    return list_urls, file_names                                                 
+
+
+
+def scrape_for_file_links(url, data_type, frequency, location_type):
     """
     Scrape a given URL for links to files with specific extensions (.csv, .zip) and return a list of these file URLs.
 
@@ -103,14 +209,23 @@ def scrape_for_file_links(url, transaction_type, fuel_type, location_type):
     list_urls = []
     # Make a GET request to fetch the raw HTML content
     response = requests.get(url)
-
+    
     # Check if the request was successful
     if response.status_code == 200:
         # Use BeautifulSoup to parse the HTML content
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        if transaction_type == "venda":
-            return scrapping_venda_url(soup, fuel_type, location_type) 
+        if data_type == "sales":
+            if frequency == "monthly":
+                return scrapping_sales_monthly_state(soup) 
+            elif frequency == "yearly":
+                if location_type == "city":
+                    return scrapping_sales_yearly_city(soup)
+                elif location_type == "state":
+                     return scrapping_sales_yearly_state(soup)
+        elif data_type == "production":
+            if frequency == "monthly":
+                return scrapping_production_monthly(soup)
         else:
             return "not exists"
         
@@ -152,13 +267,20 @@ def download_file_directly(url, folder, filename=None, max_retries=10):
     
     while attempts < max_retries:
         try:
-            print("Checking download...")
             if not filename:
                 filename = url.split('/')[-1]
             file_path = os.path.join(folder, filename)
             # print(f"Downloading {url} to {file_path}...")
-            needDownload = os.path.isfile(file_path)
-            if not needDownload:
+            exists = os.path.isfile(file_path)
+            if not exists:
+                
+                splits = filename.split("_")[0:-1]
+                name_file = "_".join(splits)
+                for f in os.listdir(folder):
+                    if f.endswith('.csv') and name_file in f:
+                        old_file = os.path.join(folder, f)
+                        os.remove(old_file) #remove old files unused
+                
                 with requests.get(url, stream=True) as response:
                     # print(f"Response Status Code: {response.status_code}")
 
@@ -169,22 +291,22 @@ def download_file_directly(url, folder, filename=None, max_retries=10):
                                 if chunk:
                                     file.write(chunk)
                         # print(f"\033[32mFile saved successfully at {file_path}\033[0m")
-                        return f"File downloaded successfully"
+                        return True
                     else:
-                        return "\033[31mError: The download request failed with status code: " + str(response.status_code) + "\033[0m"
+                        return False
                     
-            return f"Dataset already updated"
+            return True
         except (ChunkedEncodingError, IncompleteRead) as e:
             print(f"\033[31mAn error occurred: {e}\033[0m. Retrying in 5 seconds...")
             time.sleep(10)  # Corrected to show 10 seconds as per your retry sleep
             attempts += 1
         except Exception as e:
             print(f"\033[31mAn error occurred: {e}\033[0m")
-            return "An error occurred: " + str(e)
+            return False
 
-    return "\033[31mError: Max retries reached. Failed to download the file.\033[0m"
+    return False
 
-def download_anp_data(transaction_type="sales", location_type="state", fuel_type="gasolinec"):
+def download_anp_data(data_type="sales", location_type="state", frequency="monthly"):
     """
     Download data from various ANP URLs and organize it into specified folders.
 
@@ -202,29 +324,24 @@ def download_anp_data(transaction_type="sales", location_type="state", fuel_type
     """
     folder_paths=['dados', 'raw_data']
     dic = {
-        'venda': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/vendas-de-derivados-de-petroleo-e-biocombustiveis',
-        'producao_historica': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/producao-de-petroleo-e-gas-natural-nacional',
-        'producao_estados': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/producao-de-petroleo-e-gas-natural-por-estado-e-localizacao',
-        'importacao_exportacao': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/importacoes-e-exportacoes',
-        'preco_historico': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/serie-historica-de-precos-de-combustiveis'
+        'sales': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/vendas-de-derivados-de-petroleo-e-biocombustiveis',
+        'production_historic': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/producao-de-petroleo-e-gas-natural-nacional',
+        'production': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/producao-de-petroleo-e-gas-natural-por-estado-e-localizacao',
+        'import_export': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/importacoes-e-exportacoes',
+        'prices': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/serie-historica-de-precos-de-combustiveis'
     }
-    # for element in dic:
-    categoria = translate_transaction_type_name(transaction_type)
-    derivado = "" if fuel_type is None else translate_fuel_name(fuel_type)
-    localidade = translate_location_type_name(location_type)
-    
-    folder_path = os.path.join(*folder_paths, categoria)
-    # folder_path = os.path.join(file_path, folder_path)
+    folder_path = os.path.join(*folder_paths, data_type)
     folder_path = ensure_folder_exists([folder_path])
-    url = dic[categoria]
-    links, file_name = scrape_for_file_links(url, transaction_type=categoria, fuel_type=derivado, location_type=localidade)
-    file_name=file_name.replace("/", "-")+".csv"
-    for link in links:
-        # print(file_name)
-        msg = download_file_directly(url=link, filename=file_name, folder=folder_path)
-        print(msg)
+    url = dic[data_type]
+    links, file_names = scrape_for_file_links(url, data_type=data_type, frequency=frequency, location_type=location_type)
+    file_names = [file_name.replace("/", "-") + ".csv" for file_name in file_names]
+    if len(links) != len(file_names):
+        raise Exception("Problem loading url files from ANP website")
+    isUpdated = False
+    for i, link in enumerate(links):
+        isUpdated = download_file_directly(url=link, filename=file_names[i], folder=folder_path)
         if '.zip' in link:
             file_name = link.split('/')[-1]
             unzip_and_delete(os.path.join(folder_path, file_name))
-    return file_name
+    return file_names, isUpdated
 # download_anp_data()

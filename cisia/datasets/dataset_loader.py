@@ -7,6 +7,83 @@ class DatasetLoader:
     """Handle datasets provided by CISIA"""
 
     @staticmethod
+    def sales_monthly_state(download_path='./', data_prepared=True):
+        """
+       Processes and returns the path to the TSF file containing monthly sales data by state from the ANP database.
+       It also indicates if the data is the most recently updated.
+
+        Args:
+            download_path (str): Directory where the TSF file will be saved after download and processing. Default is './'.
+            data_prepared (bool): Indicates whether the dataset should be processed and ready for use.
+                               
+                                - True: The dataset will be cleaned, removing missing values and outliers.
+                                - False: The dataset will include missing values and outliers.
+
+        Returns:
+            str: Path to the processed TSF file.
+            bool: If the dataset returned is the last update.
+        """
+        filenames, isUpdated = download_anp_data(data_type="sales", location_type="state", frequency="monthly")
+        if len(filenames) > 1:
+            raise Exception("ANP website not working as expected")
+        if data_prepared:
+            tsf_path = processar_dpee_mes_estado(download_path, filenames=filenames)
+            return tsf_path, isUpdated
+        
+        return "Not implemented", False
+    
+    @staticmethod
+    def sales_yearly_state(download_path='./', data_prepared=True):
+        """
+        Processes and returns the path to the TSF file containing yearly sales data by state from ANP database. 
+        It also indicates if the data is the most recently updated.
+        
+        Args:
+            download_path (str): Directory where the TSF file will be saved after download and processing. Default is './'.
+            data_prepared (bool): Indicates whether the dataset should be processed and ready for use.
+                                
+                                - True: The dataset will be cleaned, removing missing values and outliers.
+                                - False: The dataset will include missing values and outliers.
+
+        Returns:
+            str: Path to the processed TSF file.
+            bool: If the dataset returned is the last update.
+        """
+        filenames, isUpdated = download_anp_data(data_type="sales", location_type="state", frequency="yearly")
+        
+        if data_prepared:
+            tsf_path = processar_dpee_ano_estado(download_path, filenames=filenames)
+            return tsf_path, isUpdated
+        
+        return "Not implemented", False
+    
+    @staticmethod
+    def sales_yearly_city(download_path='./', data_prepared=True):
+        """
+        Processes and returns the path to the TSF file containing yearly sales data by city from ANP database.
+        It also indicates if the data is the most recently updated.
+        
+        Args:
+            download_path (str): Directory where the TSF file will be saved after download and processing. Default is './'.
+            data_prepared (bool): Indicates whether the dataset should be processed and ready for use.
+                                
+                                - True: The dataset will be cleaned, removing missing values and outliers.
+                                - False: The dataset will include missing values and outliers.
+
+        Returns:
+            str: Path to the processed TSF file.
+            bool: If the dataset returned is the last update.
+        """
+        filenames, isUpdated = download_anp_data(data_type="sales", location_type="city", frequency="yearly")
+        
+        if data_prepared:
+            tsf_path = processar_derivados_municipio_ano(download_path=download_path, filenames=filenames)
+            return tsf_path, isUpdated
+        
+        return "Not implemented", False
+        
+        
+    @staticmethod
     def download_anp(download_path='./', transaction_type=None, location_type=None, fuel_type=None):
         """
         Downloads actual data from ANP based on the transaction type, location type, and fuel type.

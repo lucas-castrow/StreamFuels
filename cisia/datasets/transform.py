@@ -2,7 +2,9 @@ import pandas as pd
 from .auxiliary_functions import *
 import editdistance
 import numpy as np
+from .extract import *
 from datetime import datetime
+from tqdm import tqdm
 # Suprimir o aviso SettingWithCopyWarning
 pd.set_option('mode.chained_assignment', None)
 
@@ -23,24 +25,24 @@ def selecionar_csv_por_produto_local(produto, local):
         ["biodiesel b100 m3", "n/a", "vendas-biodiesel-b100-m3.csv"],
         ["combustíveis m3", "n/a", "vendas-combustiveis-m3-1990-2024.csv"],
         ["combustíveis segmento m3", "n/a", "vendas-combustiveis-segmento-m3-2012-2024.csv"],
-        ["etanolhidratado", "estado", "vendas-etanol-hidratado-por-estado-1980-1989.csv"], #m3
+        ["etanolhidratado", "estado", "vendas_etanol_hidratado_por_estado_1980-1989.csv"], #m3
         ["etanolhidratado", "município", "vendas-anuais-de-etanol-hidratado-por-municipio.csv"], #litro
-        ["gasolinac", "estado", "vendas-gasolina-c-por-estado-1947-1989.csv"], #m3
+        ["gasolinac", "estado", "vendas_gasolina_c_por_estado_1947-1989.csv"], #m3
         ["gasolinac", "município", "vendas-anuais-de-gasolina-c-por-municipio.csv"], #litro
-        ["gasolinadeaviacao", "estado", "vendas-gasolina-aviacao-por-estado-1947-1989.csv"], #m3
+        ["gasolinadeaviacao", "estado", "vendas_gasolina_aviacao_por_estado_1947-1989.csv"], #m3
         ["gasolinadeaviacao", "município", "vendas-anuais-de-gasolina-de-aviacao-por-municipio.csv"], #litro
-        ["glp", "estado", "vendas-glp-por-estado-1953-1989.csv"], #tonelada
+        ["glp", "estado", "vendas_glp_por_estado_1953-1989.csv"], #tonelada
         ["glp", "município", "vendas-anuais-de-glp-por-municipio.csv"], #kg
         ["glp tipo vasilhame m3", "n/a", "vendas-glp-tipo-vasilhame-m3-2010-2024.csv"], #
-        ["querosenedeaviacao", "estado", "vendas-querosene-aviacao-por-estado-1959-1989.csv"], #m3
+        ["querosenedeaviacao", "estado", "vendas_querosene_aviacao_por_estado_1959-1989.csv"], #m3
         ["querosenedeaviacao", "município", "vendas-anuais-de-querosene-de-aviacao-por-municipio.csv"], #litro
-        ["queroseneiluminante", "estado", "vendas-querosene-iluminante-por-estado-1947-1989.csv"], #m3
+        ["queroseneiluminante", "estado", "vendas_querosene_iluminante_por_estado_1947-1989.csv"], #m3
         ["queroseneiluminante", "município", "vendas-anuais-de-querosene-iluminante-por-municipio.csv"], #litro
-        ["oleocombustivel", "estado", "vendas-oleo-combustivel-por-estado-1947-1989.csv"], #tonelada
+        ["oleocombustivel", "estado", "vendas_oleo_combustivel_por_estado_1947-1989.csv"], #tonelada
         ["oleocombustivel", "município", "vendas-anuais-de-oleo-combustivel-por-municipio.csv"], #kg
-        ["oleodiesel", "estado", "vendas-oleo-diesel-por-estado-1947-1989.csv"],  #m3
+        ["oleodiesel", "estado", "vendas_oleo_diesel_por_estado_1947-1989.csv"],  #m3
         ["oleodiesel", "município", "vendas-anuais-de-oleo-diesel-por-municipio.csv"], #litro
-        ["oleodiesel tipo m3", "estado", "vendas-oleo-diesel-tipo-m3-2013-2024.csv"]  #m3
+        ["oleodiesel tipo m3", "estado", "vendas_oleo_diesel_tipo_m3_2013-2024.csv"]  #m3
     ]
 
     for elemento in dic:
@@ -321,53 +323,58 @@ def calcular_tamanho_gaps_series(df):
 
 
 #processa o arquivo raw_data/venda/vendas-combustiveis-m3-1990-2024.csv
-def processar_dpee_mes_estado(download_path="./", filename=None,correct_outliers=True, outlier_window=12):
+def processar_dpee_mes_estado(download_path="./", filenames=[],correct_outliers=True, outlier_window=12):
     # Carregar dados
-    load_path = os.path.join('dados', 'raw_data', 'venda')
+    load_path = os.path.join('dados', 'raw_data', 'sales')
     file_path = get_default_download_dir()
     load_path = os.path.join(file_path, load_path)
-    df = pd.read_csv(os.path.join(load_path, filename), sep=';')
-    
-
-    df['timestamp'] = df['ANO'].astype(str) + '-' + df['MÊS'].apply(mes_para_numero).astype(str)
-    
-
-    max_date, min_date = obter_max_min_datas(df, 'timestamp', 'mes')
-    
-
-    df['m3'] = df['VENDAS'].astype(str).str.replace(",", ".").astype(float)
-    for column in ['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO']:
-        df[column] = df[column].apply(parse_string)
-    
-
-    df = df.sort_values(by='timestamp')
-    
-
-    combinacoes = combinar_valores_unicos_colunas(df, ['UNIDADE DA FEDERAÇÃO', 'PRODUTO'])
-    
-
     series_lines = []
-    
-    for combinacao in combinacoes:
-        uf, produto = (combinacao[0], combinacao[1])
-        df_filtrado = df[(df['UNIDADE DA FEDERAÇÃO'] == uf) & (df['PRODUTO'] == produto)][['timestamp', 'm3']]
-        
-        if not df_filtrado.empty:
-            df_filtrado = fill_missing_dates(df_filtrado, 'timestamp', 'm3', min_date, max_date)
-            
-            if correct_outliers:
-                outliers_idx, outliers_values = outlier_detection(df_filtrado['m3'], outlier_window)
-                df_filtrado['m3'] = remove_outliers(df_filtrado['m3'], outliers_idx)
-        
-            series_name = f"{estado_para_sigla(uf)}_{produto}".lower().replace(" ", "")
-            # start_timestamp = pd.to_datetime(df_filtrado['timestamp'].iloc[0][:4] + '-' + df_filtrado['timestamp'].iloc[0][4:], format='%Y-%m').strftime('%Y-%m')
-            start_timestamp = datetime.strptime(df_filtrado['timestamp'].iloc[0], '%Y%m').strftime('%Y-%m-%d %H-%M-%S')
-            values = ",".join(map(str, df_filtrado['m3'].tolist()))
-            series_lines.append(f"{series_name}:{start_timestamp}:{values}")
 
-    path = ensure_folder_exists(['dados', 'venda'])
-    nome_arquivo = 'cisia_anp_state_monthly.tsf'
+    nome_arquivo = 'fuel_sales_state_monthly.tsf'
     tsf_path = os.path.join(download_path, nome_arquivo)
+
+    for filename in filenames:
+        df = pd.read_csv(os.path.join(load_path, filename), sep=';')
+        
+
+        df['timestamp'] = df['ANO'].astype(str) + '-' + df['MÊS'].apply(mes_para_numero).astype(str)
+        
+
+        max_date, min_date = obter_max_min_datas(df, 'timestamp', 'mes')
+        
+
+        df['m3'] = df['VENDAS'].astype(str).str.replace(",", ".").astype(float)
+        for column in ['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO']:
+            df[column] = df[column].apply(parse_string)
+        
+
+        df = df.sort_values(by='timestamp')
+        
+
+        combinacoes = combinar_valores_unicos_colunas(df, ['UNIDADE DA FEDERAÇÃO', 'PRODUTO'])
+        
+        
+        for i, combinacao in enumerate(combinacoes, start=1):
+            uf, produto = (combinacao[0], combinacao[1])
+            df_filtrado = df[(df['UNIDADE DA FEDERAÇÃO'] == uf) & (df['PRODUTO'] == produto)][['timestamp', 'm3']]
+            
+            if not df_filtrado.empty:
+                df_filtrado = fill_missing_dates(df_filtrado, 'timestamp', 'm3', min_date, max_date)
+                
+                if correct_outliers:
+                    outliers_idx, outliers_values = outlier_detection(df_filtrado['m3'], outlier_window)
+                    df_filtrado['m3'] = remove_outliers(df_filtrado['m3'], outliers_idx)
+            
+                # series_name = f"{estado_para_sigla(uf)}_{produto}".lower().replace(" ", "")
+                series_name = f"T{i}"
+                state = estado_para_sigla(uf).upper()
+                fuel_type = fuel_pt_to_en(produto)
+                # start_timestamp = pd.to_datetime(df_filtrado['timestamp'].iloc[0][:4] + '-' + df_filtrado['timestamp'].iloc[0][4:], format='%Y-%m').strftime('%Y-%m')
+                start_timestamp = datetime.strptime(df_filtrado['timestamp'].iloc[0], '%Y%m').strftime('%Y-%m-%d %H-%M-%S')
+                end_timestamp = datetime.strptime(df_filtrado['timestamp'].iloc[-1], '%Y%m').strftime('%Y-%m-%d %H-%M-%S')
+                values = ",".join(map(str, df_filtrado['m3'].tolist()))
+                series_lines.append(f"{series_name}:{start_timestamp}:{end_timestamp}:{state}:{fuel_type}:{values}")
+
     
     header = """# Dataset Information
 # This dataset contains 216 monthly time series provided by ANP and cleaned by CISIA.
@@ -379,6 +386,9 @@ def processar_dpee_mes_estado(download_path="./", filename=None,correct_outliers
 @relation CISIA-ANP
 @attribute series_name string
 @attribute start_timestamp date
+@attribute end_timestamp date
+@attribute state_code string
+@attribute fuel_type string
 @frequency monthly
 @horizon 12
 @missing false
@@ -393,23 +403,37 @@ def processar_dpee_mes_estado(download_path="./", filename=None,correct_outliers
     return tsf_path
 
 #processa o arquivo raw_data/venda/vendas-combustiveis-m3-1990-2023.csv
-def processar_dpee_ano_estado(load_path = os.path.join('dados', 'raw_data', 'venda'), correct_outliers = True, outlier_window = 5):
-    df = pd.read_csv(os.path.join(load_path, 'vendas-combustiveis-m3-1990-2024.csv'), sep =';')
+def processar_dpee_ano_estado(download_path="./", filenames=[],correct_outliers=True, outlier_window=12):
+
+    load_path = os.path.join('dados', 'raw_data', 'sales')
+    file_path = get_default_download_dir()
+    load_path = os.path.join(file_path, load_path)
+
+    filenames, isUpdated = download_anp_data(data_type="sales", location_type="state", frequency="monthly")
+    
+    series_lines = []
+
+    nome_arquivo = 'fuel_sales_state_yearly.tsf'
+    tsf_path = os.path.join(download_path, nome_arquivo)
+    i = 0
+    df = pd.read_csv(os.path.join(load_path, filenames[0]), sep=';')
+
     df['timestamp'] = df['ANO'].astype(str)
     for column in ['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO']:
         df[column] = df[column].apply(parse_string)
     df['m3'] = df['VENDAS'].astype(str).str.replace(",", ".").astype(float)
     combinacoes = combinar_valores_unicos_colunas(df, ['UNIDADE DA FEDERAÇÃO', 'PRODUTO'])
     max_date = obter_max_min_datas(df, 'timestamp', 'ano')[0]
+
     for combinacao in combinacoes:
-        print(combinacao)
         uf, produto = (combinacao[0],combinacao[1])
         df_filtrado = df[(df['UNIDADE DA FEDERAÇÃO'] == uf) & (df['PRODUTO'] == produto)][['timestamp', 'm3']]
         if not df.empty:
             df_agg = df_filtrado.groupby('timestamp').agg({'m3': 'sum'}).reset_index()
-            nome_arquivo = f'anual_{estado_para_sigla(uf)}_{produto}.csv'
+            
             arquivo_historico = selecionar_csv_por_produto_local(produto, 'estado')
             df_historico = pd.read_csv(os.path.join(load_path, arquivo_historico), sep =';')
+
             for column in ['GRANDE REGIÃO', 'ESTADO', 'PRODUTO']:
                 df_historico[column] = df_historico[column].apply(parse_string)
             df_historico['timestamp'] = df_historico['ANO'].astype(str)
@@ -421,95 +445,29 @@ def processar_dpee_ano_estado(load_path = os.path.join('dados', 'raw_data', 'ven
             df_complete = pd.concat([df_historico, df_agg])
             df_complete = df_complete.sort_values(by='timestamp')
             df_complete = fill_missing_dates(df_complete, 'timestamp', 'm3', max_date, min_date)
-            path = ensure_folder_exists(['dados', 'venda_tratamento_parcial', 'anual', 'uf', produto])
-            df_complete.to_csv(os.path.join(path, nome_arquivo), sep=';', index=False)
+            
+
+            # df_complete.to_csv(os.path.join(path, nome_arquivo), sep=';', index=False)
+
             if correct_outliers:
                 outliers_idx, outliers_values = outlier_detection(df_complete['m3'], outlier_window)
                 df_complete['m3'] = remove_outliers(df_complete['m3'], outliers_idx)
-            path = ensure_folder_exists(['dados', 'venda', 'anual', 'uf', produto])
-            df_complete.to_csv(os.path.join(path, nome_arquivo), sep=';', index=False)
-
-def processar_derivados_municipio_ano(download_path = "./", filename=None, fuel_type="",correct_outliers = True, outlier_window = 5, min_series_length= 5):
-    load_path = os.path.join('dados', 'raw_data', 'venda')
-    file_path = get_default_download_dir()
-    load_path = os.path.join(file_path, load_path)
-    
-    derivados = {'asphalt':'asfalto', 'ethanol':'etanolhidratado', 'gasoline-r': 'gasolinac', 'gasoline-a':'gasolinadeaviacao', 'kerosene-a':'querosenedeaviacao', 'LPG':'glp', 'kerosene-i':'queroseneiluminante', 'oil':'oleocombustivel', 'diesel':'oleodiesel'}
-    dic_series_excluidas = {'uf':[], 'produto': [], 'municipio': [], 'dados_faltantes':[]}
-    dic_series_inputadas = {'uf':[], 'produto': [], 'municipio': [], 'timestamps_faltantes':[]}
-    
-    derivado = derivados[fuel_type]
-    
-    # arquivo = selecionar_csv_por_produto_local(derivado.lower(), 'município')
-    arquivo = filename
-    
-    local_path = os.path.join(load_path, arquivo)
-    local_path = os.path.join(get_default_download_dir(), local_path)
-    df = pd.read_csv(local_path, sep=';')
-    df = corrigir_municipios(df, 'MUNICÍPIO', 'UF', 'CÓDIGO IBGE')
-    if derivado == 'glp':
-        df['m3'] = df['P13'].astype(float) + df['OUTROS'].astype(float) *0.001 #convert to m3
-    else:
-        df['m3'] = df['VENDAS'].replace(",", ".", regex=True).astype(float) *0.001 #convert to m3
-
-    if derivado in ['asfalto', 'glp', 'oleocombustivel']: #estão em kgs
-            df['m3'] = df['m3'].apply(lambda kg: kg_to_m3(derivado, kg)).round(4)
-
-    df['timestamp'] = df['ANO']
-    df[['GRANDE REGIÃO', 'UF', 'PRODUTO', 'MUNICÍPIO']] = df[['GRANDE REGIÃO', 'UF', 'PRODUTO', 'MUNICÍPIO']].applymap(parse_string)
-    max_date, min_date = obter_max_min_datas(df, 'timestamp', 'ano')
-    combinacoes = combinar_valores_unicos_colunas(df, ['UF', 'PRODUTO', 'MUNICÍPIO'])
-    series_lines = []
-    for uf, produto, municipio in combinacoes:
-        if municipio == '':
-            continue
-        df_filtrado = df[(df['UF'] == uf) & (df['PRODUTO'] == produto) & (df['MUNICÍPIO'] == municipio)][['timestamp', 'm3']]
-
-        if not df_filtrado.empty:
-            nome_arquivo = f'anual_{municipio}_{uf}_{produto}.csv'
-            # registrar_meses_duplicados(df_filtrado, produto, municipio+"-"+uf, 'anual')
-            df_filtrado = df_filtrado.groupby('timestamp').agg({'m3': 'max'}).reset_index()
-            df_filled = fill_missing_dates(df_filtrado, 'timestamp', 'm3', min_date, max_date)
-            # path = ensure_folder_exists(['dados', 'venda_tratamento_parcial', 'anual', 'municipio', produto])
-            # df_filled.to_csv(os.path.join(path, nome_arquivo), sep=';', index=False)
-            tem_valores_faltantes = len(df_filled[df_filled['m3']== -1])>0
-            if tem_valores_faltantes:
-                df_filled = cortar_sequencias_vazias(df_filled).reset_index(drop=True)
-                _, gaps, _ = calcular_tamanho_gaps_series(df_filled)
-                if any(gap == 20 for gap in gaps) or len(df_filled)<min_series_length:
-                    dic_series_excluidas['uf'].append(uf)
-                    dic_series_excluidas['produto'].append(produto)
-                    dic_series_excluidas['municipio'].append(municipio)
-                    dic_series_excluidas['dados_faltantes'].append(len(df_filled[df_filled['m3']==-1]))
-                    continue
-                if len(df_filled[df_filled['m3']== -1])>0:
-                    dic_series_inputadas['uf'].append(uf)
-                    dic_series_inputadas['produto'].append(produto)
-                    dic_series_inputadas['municipio'].append(municipio)
-                    datas_faltantes =  ",".join(df_filled.loc[df_filled['m3'] == -1, 'timestamp'].tolist())
-                    dic_series_inputadas['timestamps_faltantes'].append(datas_faltantes)
-                    df_filled = interpolar_valores_faltantes(df_filled)
-            # path = ensure_folder_exists(['dados', 'venda_com_outliers', 'anual', 'municipio', produto])
-            # df_filled.to_csv(os.path.join(path, nome_arquivo), sep=';', index=False)
-            # print(uf, produto, municipio)
-            if correct_outliers:
-                outliers_idx, outliers_values = outlier_detection(df_filled['m3'], outlier_window)
-                df_filled['m3'] = remove_outliers(df_filled['m3'], outliers_idx)
-            # path = ensure_folder_exists(['dados', 'venda', 'anual', 'municipio', produto])
-            # df_filled.to_csv(os.path.join(path, nome_arquivo), sep=';', index=False)
-            
-            
-            series_name = f"{municipio}_{uf}_{produto}".lower().replace(" ", "")
-            start_timestamp = datetime.strptime(df_filled['timestamp'].iloc[0] + '-01-01 00-00-00', '%Y-%m-%d %H-%M-%S')
+            # path = ensure_folder_exists(['dados', 'sales', 'anual', 'uf', produto])
+            i+=1
+            series_name = f"T{i}"
+            state = estado_para_sigla(uf).upper()
+            fuel_type = fuel_pt_to_en(produto)
+            # start_timestamp = pd.to_datetime(df_filtrado['timestamp'].iloc[0][:4] + '-' + df_filtrado['timestamp'].iloc[0][4:], format='%Y-%m').strftime('%Y-%m')
+            start_timestamp = datetime.strptime(df_complete['timestamp'].iloc[0] + '-01-01 00-00-00', '%Y-%m-%d %H-%M-%S')
+            end_timestamp = datetime.strptime(df_complete['timestamp'].iloc[-1] + '-01-01 00-00-00', '%Y-%m-%d %H-%M-%S')
             start_timestamp = start_timestamp.strftime('%Y-%m-%d %H-%M-%S')
-            values = ",".join(map(str, df_filled['m3'].tolist()))
-            series_lines.append(f"{series_name}:{start_timestamp}:{values}")
+            end_timestamp = end_timestamp.strftime('%Y-%m-%d %H-%M-%S')
             
-    nome_arquivo = 'cisia_anp_city_yearly.tsf'
-    tsf_path = os.path.join(download_path, nome_arquivo)   
-    
+            values = ",".join(map(str, df_complete['m3'].tolist()))
+            series_lines.append(f"{series_name}:{start_timestamp}:{end_timestamp}:{state}:{fuel_type}:{values}")
+
     header = """# Dataset Information
-# This dataset contains 5.164 yearly time series from cities in BRAZIL related to derivatives petroleum sales provided by ANP and cleaned by CISIA.
+# This dataset contains 216 yearly time series provided by ANP and cleaned by CISIA.
 #
 # For more details, please refer to
 # Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2020. The m4 competition: 100,000 time series and 61 forecasting methods. International Journal of Forecasting 36 (1), 54–74.
@@ -518,6 +476,141 @@ def processar_derivados_municipio_ano(download_path = "./", filename=None, fuel_
 @relation CISIA-ANP
 @attribute series_name string
 @attribute start_timestamp date
+@attribute end_timestamp date
+@attribute state_code string
+@attribute fuel_type string
+@frequency monthly
+@horizon 5
+@missing false
+@equallength true
+@data"""
+
+    with open(tsf_path, 'w') as f:
+        f.write(header + "\n")
+        f.writelines("\n".join(series_lines))
+    
+    print(f"dataset downloaded at: {tsf_path}")
+    return tsf_path
+  
+
+def processar_derivados_municipio_ano(download_path = "./", filenames=[] ,correct_outliers = True, outlier_window = 5, min_series_length= 5):
+    load_path = os.path.join('dados', 'raw_data', 'sales')
+    file_path = get_default_download_dir()
+    load_path = os.path.join(file_path, load_path)
+    
+    # derivados = {'asphalt':'asfalto', 'ethanol':'etanolhidratado', 'gasoline-r': 'gasolinac', 'gasoline-a':'gasolinadeaviacao', 'kerosene-a':'querosenedeaviacao', 'kerosene-i':'queroseneiluminante', 'oil':'oleocombustivel', 'diesel':'oleodiesel'}
+    dic_series_excluidas = {'uf':[], 'produto': [], 'municipio': [], 'dados_faltantes':[]}
+    dic_series_inputadas = {'uf':[], 'produto': [], 'municipio': [], 'timestamps_faltantes':[]}
+    series_lines = []   
+    
+    nome_arquivo = 'fuel_sales_city_yearly.tsf'
+    tsf_path = os.path.join(download_path, nome_arquivo)   
+    
+    if os.path.exists(tsf_path):
+        print("Cleaning old tsf file.")
+        os.remove(tsf_path)
+    
+    i = 0
+    for filename in tqdm(filenames, desc="Preparing datasets"):
+        #ex: sales_yearly_city_oleocombustivel_04-01-2024.csv
+        derivado = filename.split("_")[3]
+        
+        arquivo = filename
+        
+        local_path = os.path.join(load_path, arquivo)
+        local_path = os.path.join(get_default_download_dir(), local_path)
+        
+        df = pd.read_csv(local_path, sep=';')
+        df = corrigir_municipios(df, 'MUNICÍPIO', 'UF', 'CÓDIGO IBGE')
+        if derivado == 'glp':
+            df['m3'] = df['P13'].astype(float) + df['OUTROS'].astype(float) *0.001 #convert to m3
+        else:
+            df['m3'] = df['VENDAS'].replace(",", ".", regex=True).astype(float) *0.001 #convert to m3
+
+        if derivado in ['asfalto', 'glp', 'oleocombustivel']: #estão em kgs
+                df['m3'] = df['m3'].apply(lambda kg: kg_to_m3(derivado, kg)).round(4)
+
+        df['timestamp'] = df['ANO']
+        df[['GRANDE REGIÃO', 'UF', 'PRODUTO', 'MUNICÍPIO']] = df[['GRANDE REGIÃO', 'UF', 'PRODUTO', 'MUNICÍPIO']].map(parse_string)
+        max_date, min_date = obter_max_min_datas(df, 'timestamp', 'ano')
+        combinacoes = combinar_valores_unicos_colunas(df, ['UF', 'PRODUTO', 'MUNICÍPIO'])
+        
+        for uf, produto, municipio in combinacoes:
+            # print(f"Processando: UF={uf}, Produto={produto}, Município={municipio}")
+            if municipio == '':
+                continue
+            df_filtrado = df[(df['UF'] == uf) & (df['PRODUTO'] == produto) & (df['MUNICÍPIO'] == municipio)][['timestamp', 'm3']]
+
+            if not df_filtrado.empty:
+                nome_arquivo = f'anual_{municipio}_{uf}_{produto}.csv'
+                # registrar_meses_duplicados(df_filtrado, produto, municipio+"-"+uf, 'anual')
+                df_filtrado = df_filtrado.groupby('timestamp').agg({'m3': 'max'}).reset_index()
+                df_filled = fill_missing_dates(df_filtrado, 'timestamp', 'm3', min_date, max_date)
+                # path = ensure_folder_exists(['dados', 'venda_tratamento_parcial', 'anual', 'municipio', produto])
+                # df_filled.to_csv(os.path.join(path, nome_arquivo), sep=';', index=False)
+                tem_valores_faltantes = len(df_filled[df_filled['m3']== -1])>0
+                if tem_valores_faltantes:
+                    df_filled = cortar_sequencias_vazias(df_filled).reset_index(drop=True)
+                    _, gaps, _ = calcular_tamanho_gaps_series(df_filled)
+                    if any(gap == 20 for gap in gaps) or len(df_filled)<min_series_length:
+                        dic_series_excluidas['uf'].append(uf)
+                        dic_series_excluidas['produto'].append(produto)
+                        dic_series_excluidas['municipio'].append(municipio)
+                        dic_series_excluidas['dados_faltantes'].append(len(df_filled[df_filled['m3']==-1]))
+                        continue
+                    if len(df_filled[df_filled['m3']== -1])>0:
+                        dic_series_inputadas['uf'].append(uf)
+                        dic_series_inputadas['produto'].append(produto)
+                        dic_series_inputadas['municipio'].append(municipio)
+                        datas_faltantes =  ",".join(df_filled.loc[df_filled['m3'] == -1, 'timestamp'].tolist())
+                        dic_series_inputadas['timestamps_faltantes'].append(datas_faltantes)
+                        df_filled = interpolar_valores_faltantes(df_filled)
+                # path = ensure_folder_exists(['dados', 'venda_com_outliers', 'anual', 'municipio', produto])
+                # df_filled.to_csv(os.path.join(path, nome_arquivo), sep=';', index=False)
+                # print(uf, produto, municipio)
+                if correct_outliers:
+                    outliers_idx, outliers_values = outlier_detection(df_filled['m3'], outlier_window)
+                    df_filled['m3'] = remove_outliers(df_filled['m3'], outliers_idx)
+                # path = ensure_folder_exists(['dados', 'sales', 'anual', 'municipio', produto])
+                # df_filled.to_csv(os.path.join(path, nome_arquivo), sep=';', index=False)
+                
+                
+                start_timestamp = datetime.strptime(df_filled['timestamp'].iloc[0] + '-01-01 00-00-00', '%Y-%m-%d %H-%M-%S')
+                end_timestamp = datetime.strptime(df_filled['timestamp'].iloc[-1] + '-01-01 00-00-00', '%Y-%m-%d %H-%M-%S')
+                
+                #pego somente as series que tem inicio e fim sem quebras
+                years = df_filled['timestamp'].astype(int)
+                start_year = years.iloc[0]
+                end_year = years.iloc[-1]
+                
+                expected_years = list(range(start_year, end_year + 1))
+                actual_years = years.tolist()
+                
+                if actual_years == expected_years:
+                    start_timestamp = start_timestamp.strftime('%Y-%m-%d %H-%M-%S')
+                    end_timestamp = end_timestamp.strftime('%Y-%m-%d %H-%M-%S')
+                    serie_lista = df_filled['m3'].tolist()
+                    values = ",".join(map(str, serie_lista))
+                    i+=1
+                    series_name = f"T{i}"
+                    fuel_type = fuel_pt_to_en(produto)
+                    series_lines.append(f"{series_name}:{start_timestamp}:{end_timestamp}:{uf.upper()}:{municipio}:{fuel_type}:{values}")
+                
+    
+    header = """# Dataset Information
+# This dataset contains 29.118 yearly time series from cities in BRAZIL related to derivatives petroleum sales provided by ANP and cleaned by CISIA.
+#
+# For more details, please refer to
+# Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2020. The m4 competition: 100,000 time series and 61 forecasting methods. International Journal of Forecasting 36 (1), 54–74.
+# Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2018. The m4 competition: results, findings, conclusion and way forward, International Journal of Forecasting 34 (4), 802–808.
+#
+@relation CISIA-ANP
+@attribute series_name string
+@attribute start_timestamp date
+@attribute end_timestamp date
+@attribute state_code string
+@attribute city string
+@attribute fuel_type string
 @frequency yearly
 @horizon 5
 @missing false
@@ -531,13 +624,13 @@ def processar_derivados_municipio_ano(download_path = "./", filename=None, fuel_
     print(f"dataset download at: {tsf_path}")     
     return tsf_path
     
-    # pd.DataFrame(dic_series_excluidas).to_csv(os.path.join('dados', 'venda', 'series_municipio_anuais_excluidas.csv'), sep=';', index=False)
-    # pd.DataFrame(dic_series_inputadas).to_csv(os.path.join('dados', 'venda', 'series_municipio_anuais_datas_inputadas.csv'), sep=';', index=False)
+    # pd.DataFrame(dic_series_excluidas).to_csv(os.path.join('dados', 'sales', 'series_municipio_anuais_excluidas.csv'), sep=';', index=False)
+    # pd.DataFrame(dic_series_inputadas).to_csv(os.path.join('dados', 'sales', 'series_municipio_anuais_datas_inputadas.csv'), sep=';', index=False)
 
 def processar_derivados_municipio_mes():
-    path_municipio = os.path.join('dados', 'venda', 'mensal', 'municipio')
+    path_municipio = os.path.join('dados', 'sales', 'monthly', 'municipio')
     ensure_folder_exists(path_municipio)
-    df_full = pd.read_csv(os.path.join('dados', 'venda', 'vendas_mensais_municipio_completo.csv'), sep=';')
+    df_full = pd.read_csv(os.path.join('dados', 'sales', 'vendas_mensais_municipio_completo.csv'), sep=';')
     df_full = corrigir_municipios(df_full, 'municipio', 'uf', 'cod_ibge')
     print(df_full.columns)
     df_full.loc[df_full['municipio'] == '*', 'municipio'] = df_full['cod_ibge']
@@ -555,9 +648,9 @@ def processar_derivados_municipio_mes():
         df_filtrado = df_full[(df_full['uf'] == uf) & (df_full['derivado'] == produto) & (df_full['municipio'] == municipio)][['timestamp', 'm3']]
         if not df_filtrado.empty:
             print(f"{uf} {produto} {municipio} {index}/{total_combinations}")
-            path = ensure_folder_exists(['dados', 'venda', 'mensal', 'municipio', produto])
+            path = ensure_folder_exists(['dados', 'sales', 'monthly', 'municipio', produto])
             nome_arquivo = f'mensal_{municipio}_{uf}_{produto}.csv'
-            registrar_meses_duplicados(df_filtrado, produto, municipio+"-"+uf, 'mensal')
+            registrar_meses_duplicados(df_filtrado, produto, municipio+"-"+uf, 'monthly')
             df_filtrado = df_filtrado.groupby('timestamp').agg({'m3': 'sum'}).reset_index()
             df_filled = fill_missing_dates(df_filtrado, 'timestamp', 'm3', min_date, max_date)
             df_filled.to_csv(os.path.join(path, nome_arquivo), sep=';', index=False)

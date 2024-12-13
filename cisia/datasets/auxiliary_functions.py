@@ -18,20 +18,21 @@ def translate_fuel_name(fuel_name):
     return fuel_mapping.get(fuel_name.lower(), "Invalid")
 
 
-def translate_location_type_name(name):
-    mapping = {
-        'city': 'município',
-        'state': 'estado',
+def fuel_pt_to_en(fuel_name):
+    fuel_mapping = {
+        'etanolhidratado':'ethanol',
+        'gasolinac':'gasoline-r',
+        'gasolinadeaviacao':'gasoline-a',
+        'oleocombustivel':'fuel oil',
+        'glp':'LPG', 
+        'oleodiesel':'diesel',
+        'queroseneiluminante':'kerosene-i',
+        'querosenedeaviacao':'kerosene-a',
+        'asfalto':'asphalt',
     }
-    return mapping.get(name.lower(), "Invalid")
+    return fuel_mapping.get(fuel_name.lower(), "Invalid")
 
-def translate_transaction_type_name(name):
-    mapping = {
-        'sales': 'venda',
-        'import': 'importacao',
-        'export': 'exportacao',
-    }
-    return mapping.get(name.lower(), "Invalid")
+
 def get_default_download_dir():
     """Return the default directory for downloads."""
     default_dir = os.path.join(os.path.expanduser("~"), ".cisia")

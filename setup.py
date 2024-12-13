@@ -12,6 +12,7 @@ setup(
         'numpy>=1.19.0',
         'editdistance>=0.5.3',
         'setuptools',
+        'tdqm=4.65.0'
     ],
     extras_require={
         #se houver incompatibilidade de versoes podemos fazer assim
