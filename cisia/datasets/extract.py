@@ -185,12 +185,36 @@ def scrapping_sales_yearly_city(soup):
             return list_urls, file_names
 
 def scrapping_production_monthly(soup):
-    h3_tags = soup.find_all('h3')
     list_urls = []    
-    # Loop through each <h3> tag found
-    padrao_data = r'\d{2}/\d{2}/\d{4}'
     file_names = []
-    return list_urls, file_names                                                 
+
+    header = soup.find(lambda tag: tag.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] and 
+                   'Produção de petróleo)' in tag.text)
+
+    if header:
+        list_element = header.find_next("ul") or header.find_next("ol")
+        list_items = list_element.find_all("li")
+        print(list_items)
+        for li_tag in list_items:
+
+            csv_links = header.find_all_next('a', href=True)
+            print(li_tag)
+            list_urls = [link['href'] for link in csv_links if link['href'].endswith('.csv')]
+            # file_names = [url.split("/")[-1].replace(".csv", "") for url in list_urls]
+            for url in list_urls:
+                filename = url.split("/")[-1].replace(".csv", "")
+                seps = filename.split("-")
+                anos = "-".join(seps[-2:])
+                filename = "_".join(seps[0:-2])
+
+                filename = filename+"_"+anos
+                file_names.append(filename)
+                print(filename)
+
+
+                span_tag = li_tag.find('span')
+                updated_at = span_tag.get_text() if span_tag else None
+        # return list_urls, file_names                                          
 
 
 
@@ -325,7 +349,7 @@ def download_anp_data(data_type="sales", location_type="state", frequency="month
     folder_paths=['dados', 'raw_data']
     dic = {
         'sales': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/vendas-de-derivados-de-petroleo-e-biocombustiveis',
-        'production_historic': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/producao-de-petroleo-e-gas-natural-nacional',
+        # 'production_historic': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/producao-de-petroleo-e-gas-natural-nacional',
         'production': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/producao-de-petroleo-e-gas-natural-por-estado-e-localizacao',
         'import_export': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/importacoes-e-exportacoes',
         'prices': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/serie-historica-de-precos-de-combustiveis'

@@ -17,6 +17,15 @@ def translate_fuel_name(fuel_name):
     }
     return fuel_mapping.get(fuel_name.lower(), "Invalid")
 
+def prod_to_en(prod):
+    prods = {
+        'petroleo': 'petroleum',
+        'lgn': 'lgn',      
+        'gasnatural': 'natural gas'
+        
+    }
+    return prods.get(prod.lower(), "Invalid")
+
 
 def fuel_pt_to_en(fuel_name):
     fuel_mapping = {
