@@ -33,7 +33,7 @@ loader = DatasetLoader()
 result, flag = loader.sales_yearly_state()
 
 df, metadata = loader.read_tsf(path_tsf=result)
-
+```
 
 *** Yearly sales of petroleum derivatives in the states of Brazil.
 ![image](https://github.com/user-attachments/assets/ab1d0ac8-9574-4229-81e6-2e3ef32e959c)
