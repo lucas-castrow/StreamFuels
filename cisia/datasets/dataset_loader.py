@@ -11,6 +11,8 @@ class DatasetLoader:
     sales_yearly_state(): yearly fuel sales data by state from ANP database
     
     sales_yearly_city(): yearly fuel sales data by city from ANP database
+
+    oil_gas_operations_monthly_state(): monthly oil production, LGN production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
     
     """
 
@@ -84,27 +86,20 @@ class DatasetLoader:
     
     
     @staticmethod
-    def production_monthly_state(download_path='./', data_prepared=True):
+    def oil_gas_operations_monthly_state(download_path='./'):
         """
-       Processes and returns the path to the TSF file containing monthly production of petroleum and natural gas data by state from the ANP database.
+       Processes and returns the path to the TSF file containing monthly oil production, LGN production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
        It also indicates if the data is the most recently updated.
 
         Args:
             download_path (str): Directory where the TSF file will be saved after download and processing. Default is './'.
-            data_prepared (bool): Indicates whether the dataset should be processed and ready for use.
-                               
-                                - True: The dataset will be cleaned, removing missing values and outliers.
-                                - False: The dataset will include missing values and outliers.
-
         Returns:
             str: Path to the processed TSF file.
             bool: If the dataset returned is the last update.
         """
         filenames, isUpdated = download_anp_data(data_type="production", location_type="state", frequency="monthly")
-        if len(filenames) > 1:
-            raise Exception("ANP website not working as expected")
       
-        tsf_path = processar_producao(download_path, filenames=filenames, data_prepared=data_prepared)
+        tsf_path = processar_producao(download_path, filenames=filenames)
         return tsf_path, isUpdated
         
     @staticmethod

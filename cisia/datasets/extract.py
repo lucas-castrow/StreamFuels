@@ -187,36 +187,31 @@ def scrapping_sales_yearly_city(soup):
 def scrapping_production_monthly(soup):
     list_urls = []    
     file_names = []
+    padrao_data = r'\d{2}/\d{2}/\d{4}'
+    target_h3 = soup.find('h3', text="Produção de petróleo")
 
-    header = soup.find(lambda tag: tag.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] and 
-                   'Produção de petróleo)' in tag.text)
+    if target_h3:
+        ul_list = target_h3.find_all_next('ul')
 
-    if header:
-        list_element = header.find_next("ul") or header.find_next("ol")
-        list_items = list_element.find_all("li")
-        print(list_items)
-        for li_tag in list_items:
-
-            csv_links = header.find_all_next('a', href=True)
-            print(li_tag)
-            list_urls = [link['href'] for link in csv_links if link['href'].endswith('.csv')]
-            # file_names = [url.split("/")[-1].replace(".csv", "") for url in list_urls]
-            for url in list_urls:
-                filename = url.split("/")[-1].replace(".csv", "")
-                seps = filename.split("-")
-                anos = "-".join(seps[-2:])
-                filename = "_".join(seps[0:-2])
-
-                filename = filename+"_"+anos
-                file_names.append(filename)
-                print(filename)
+        for ul in ul_list:
+            for li in ul.find_all('li'):
+                for i, a_tag in enumerate(li.find_all('a')):
+                    if a_tag['href'].endswith('.csv'):
+                        updated_at = re.findall(padrao_data, li.text)[0]
+                        formatted_name = formatar_petroleum_and_gas(li.text)
+                        file_name = f'{formatted_name}_{updated_at}' 
+                        list_urls.append(a_tag['href']) 
+                        file_names.append(file_name)
+        return list_urls, file_names                                          
 
 
-                span_tag = li_tag.find('span')
-                updated_at = span_tag.get_text() if span_tag else None
-        # return list_urls, file_names                                          
-
-
+def formatar_petroleum_and_gas(texto):
+    match = re.match(r"^(.*?) \(", texto)
+    if match:
+        nome = match.group(1) 
+        nome_snake_case = re.sub(r"[^\w\s]", "", nome).replace(" ", "_").lower()
+        return unidecode(nome_snake_case)
+    return None
 
 def scrape_for_file_links(url, data_type, frequency, location_type):
     """

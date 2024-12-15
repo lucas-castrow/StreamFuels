@@ -8,12 +8,15 @@ sales_yearly_state(): yearly fuel sales data by state from ANP database
 
 sales_yearly_city(): yearly fuel sales data by city from ANP database
 
+oil_gas_operations_monthly_state(): monthly oil production, LGN production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
+  
 
-## Installation
+
+<!-- ## Installation
 
 ```bash
 pip install cisia
-```
+``` -->
 
 
 To run locally, in your target python environment and in this project folder type:

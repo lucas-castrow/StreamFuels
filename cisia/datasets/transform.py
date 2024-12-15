@@ -395,7 +395,7 @@ def processar_dpee_mes_estado(download_path="./", filenames=[], data_prepared=Tr
 @attribute start_timestamp date
 @attribute end_timestamp date
 @attribute state_code string
-@attribute fuel_type string
+@attribute product string
 @frequency monthly
 @horizon 12
 @missing false
@@ -485,7 +485,7 @@ def processar_dpee_ano_estado(download_path="./", filenames=[], data_prepared=Tr
 @attribute start_timestamp date
 @attribute end_timestamp date
 @attribute state_code string
-@attribute fuel_type string
+@attribute product string
 @frequency monthly
 @horizon 5
 @missing false
@@ -623,7 +623,7 @@ def processar_derivados_municipio_ano(download_path = "./", filenames=[] , data_
 @attribute end_timestamp date
 @attribute state_code string
 @attribute city string
-@attribute fuel_type string
+@attribute product string
 @frequency yearly
 @horizon 5
 @missing {missing}
@@ -673,84 +673,119 @@ def processar_producao(download_path, filenames=[], data_prepared=True):
     load_path = os.path.join('dados', 'raw_data', 'production')
     file_path = get_default_download_dir()
     load_path = os.path.join(file_path, load_path)
-    
-    df = pd.read_csv(os.path.join(load_path, filenames[0]), sep=';')
-    df['DATA'] = df['ANO'].astype(str) + df['MÊS'].apply(mes_para_numero)
-    
-    df.drop(['ANO', 'MÊS'], axis=1, inplace=True)
-    
-    group_cols = ['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO']
+    resultado_final = pd.DataFrame()
+    series_lines = []
+    index = 0
+    nome_arquivo = f"petroleum_and_gas.tsf"
+    for filename in filenames:
+        df = pd.read_csv(os.path.join(load_path, filename), sep=';')
+        df_resultante = pd.DataFrame()
+        df['DATA'] = df['ANO'].astype(str) + df['MÊS'].apply(mes_para_numero)
+        
+        df.drop(['ANO', 'MÊS'], axis=1, inplace=True)
+        
+        group_cols = ['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO']
 
-    category = None
-    qtd_col = None
-    if 'PRODUÇÃO' in df.columns:
-        category = 'production'
-        qtd_col = 'PRODUÇÃO'
-    elif 'QUEIMADO' in df.columns:
-        category = 'flaring'
-        qtd_col = 'QUEIMADO'
-    elif 'REINJETADO' in df.columns:
-        category = 'reinjection'
-        qtd_col = 'REINJETADO'
-    elif 'DISPONÍVEL' in df.columns:
-        category = 'available'
-        qtd_col = 'DISPONÍVEL'
-    elif 'CONSUMO' in df.columns:
-        category = 'self-consumption'
-        qtd_col = 'CONSUMO'
-    
-    # Agrupa com base nas colunas determinadas
-    grupos = df.groupby(group_cols)
-    df_resultante = pd.DataFrame()
-    for group_keys, grupo in grupos:
-        # Desempacota as chaves do grupo
-        if len(group_cols) == 4:
-            grande_regiao, uf, produto = group_keys
-        else:
-            grande_regiao, uf, produto = group_keys
+        category = None
+        qtd_col = None
+        if 'PRODUÇÃO' in df.columns:
+            category = 'production'
+            qtd_col = 'PRODUÇÃO'
+        elif 'QUEIMADO' in df.columns:
+            category = 'flaring'
+            qtd_col = 'QUEIMADO'
+        elif 'REINJETADO' in df.columns:
+            category = 'reinjection'
+            qtd_col = 'REINJETADO'
+        elif 'DISPONÍVEL' in df.columns:
+            category = 'available'
+            qtd_col = 'DISPONÍVEL'
+        elif 'CONSUMO' in df.columns:
+            category = 'self-consumption'
+            qtd_col = 'CONSUMO'
         
-        # Normaliza os nomes para usar nos nomes dos arquivos
-        grande_regiao_norm = parse_string(grande_regiao)
-        uf_norm = parse_string(uf)
-        produto_norm = parse_string(produto)
-        produto_norm = prod_to_en(produto_norm)
-        
-        data_min = grupo['DATA'].min()
-        data_max = grupo['DATA'].max()
-        
-        nome_arquivo = f"2_production_monthly_state.csv"
-        
-        # Salva o grupo como CSV
-        # ensure_folder_exists(os.path.join("dados", "production", uf_norm, produto_norm, prefixo))
-        grupo[qtd_col] = grupo[qtd_col].str.replace(',', '').astype(float)
-        grupo = grupo.groupby(['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO', 'DATA'] )[qtd_col].sum().reset_index()
-        # grupo = fill_missing_dates(df = grupo[['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO', qtd_col, 'DATA']], 
-                                        #    index_cols = ['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO'] , date_col = 'DATA', 
-                                        #    start_date = data_min, end_date = data_max, fill_values = -1, date_format='%Y%m')
-        
-        
-        grupo = fill_missing_dates(df = grupo[['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO', qtd_col, 'DATA']], date_column='DATA', measurement_column='m3', min_date=data_min, max_date=data_max, data_prepared=True)
-        
-        grupo = grupo.rename(columns={'UNIDADE DA FEDERAÇÃO': 'UF'})
-        grupo['UF'] = estado_para_sigla(uf_norm).upper()
-        grupo['PRODUTO'] = produto_norm
-        grupo['category'] = category
-        
-        if df_resultante.empty:
-            df_resultante = grupo
-        else:
-            df_resultante = pd.concat([df_resultante, grupo], ignore_index=True)
+        # Agrupa com base nas colunas determinadas
+        grupos = df.groupby(group_cols)
+        for group_keys, grupo in grupos:
+            # Desempacota as chaves do grupo
+            if len(group_cols) == 4:
+                grande_regiao, uf, produto = group_keys
+            else:
+                grande_regiao, uf, produto = group_keys
+            
+            # Normaliza os nomes para usar nos nomes dos arquivos
+            grande_regiao_norm = parse_string(grande_regiao)
+            uf_norm = parse_string(uf)
+            produto_norm = parse_string(produto)
+            produto_norm = prod_to_en(produto_norm)
+            
+            data_min = grupo['DATA'].min()
+            data_max = grupo['DATA'].max()
+            
+            # Salva o grupo como CSV
+            # ensure_folder_exists(os.path.join("dados", "production", uf_norm, produto_norm, prefixo))
+            grupo[qtd_col] = grupo[qtd_col].str.replace(',', '').astype(float)
+            grupo = grupo.groupby(['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO', 'DATA'] )[qtd_col].sum().reset_index()
+            # grupo = fill_missing_dates(df = grupo[['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO', qtd_col, 'DATA']], 
+                                            #    index_cols = ['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO'] , date_col = 'DATA', 
+                                            #    start_date = data_min, end_date = data_max, fill_values = -1, date_format='%Y%m')
+            
+            
+            grupo = fill_missing_dates(df = grupo[['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO', qtd_col, 'DATA']], date_column='DATA', measurement_column='m3', min_date=data_min, max_date=data_max, data_prepared=True)
+            
+
+           
+            grupo = grupo.rename(columns={'UNIDADE DA FEDERAÇÃO': 'UF'})
+            state = estado_para_sigla(uf_norm).upper()
+            grupo['PRODUTO'] = produto_norm
+            grupo['category'] = category
+            
+            if df_resultante.empty:
+                df_resultante = grupo
+            else:
+                df_resultante = pd.concat([df_resultante, grupo], ignore_index=True)
+
+            start_timestamp = datetime.strptime(grupo['DATA'].iloc[0], '%Y%m').strftime('%Y-%m-%d %H-%M-%S')
+            end_timestamp = datetime.strptime(grupo['DATA'].iloc[-1], '%Y%m').strftime('%Y-%m-%d %H-%M-%S')
+
+            values = ",".join(map(str, grupo[qtd_col].tolist()))
+            index+=1
+            series_name = f"T{index}"
+            series_lines.append(f"{series_name}:{start_timestamp}:{end_timestamp}:{state}:{produto_norm}:{category}:{values}")
 
 
     tsf_path = os.path.join(download_path, nome_arquivo)
+
+    len_series = len(series_lines)
+    # missing = "true" if not data_prepared else "false"
     
-    resultado = (
-            df_resultante.groupby(['UF', 'PRODUTO', 'category'])[qtd_col]
-            .apply(list)
-            .reset_index()
-            .rename(columns={qtd_col: 'Series'})
-        )
-    resultado.to_csv(tsf_path, sep=";", index=False)
+    header = f"""# Dataset Information
+# This dataset contains {len_series} monthly time series provided by ANP and cleaned by CISIA.
+#
+# For more details, please refer to
+# Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2020. The m4 competition: 100,000 time series and 61 forecasting methods. International Journal of Forecasting 36 (1), 54–74.
+# Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2018. The m4 competition: results, findings, conclusion and way forward, International Journal of Forecasting 34 (4), 802–808.
+#
+@relation CISIA-ANP
+@attribute series_name string
+@attribute start_timestamp date
+@attribute end_timestamp date
+@attribute state_code string
+@attribute product string
+@attribute category string
+@frequency monthly
+@horizon 12
+@missing false
+@equallength false
+@data"""
+
+    with open(tsf_path, 'w') as f:
+        f.write(header + "\n")
+        f.writelines("\n".join(series_lines))
+    
+    print(f"dataset downloaded at: {tsf_path}")
+    return tsf_path
+
         #grande regiao
         #grupo_gr = grupo.groupby(['GRANDE REGIÃO', 'PRODUTO', 'DATA'] )[qtd_col].sum().reset_index()
 
