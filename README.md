@@ -46,4 +46,7 @@ df, metadata = loader.read_tsf(path_tsf=result)
 
 ### Yearly sales of petroleum derivatives in the cities of Brazil.
 
+![image](https://github.com/user-attachments/assets/26ac0d96-73f9-43a8-b9bf-47106cafeba4)
+
+
 
