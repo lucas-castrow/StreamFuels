@@ -35,15 +35,15 @@ result, flag = loader.sales_yearly_state()
 df, metadata = loader.read_tsf(path_tsf=result)
 ```
 
-*** Yearly sales of petroleum derivatives in the states of Brazil.
+### Yearly sales of petroleum derivatives in the states of Brazil.
 ![image](https://github.com/user-attachments/assets/ab1d0ac8-9574-4229-81e6-2e3ef32e959c)
 
-*** Monthly sales of petroleum derivatives in the states of Brazil.
+### Monthly sales of petroleum derivatives in the states of Brazil.
 ![image](https://github.com/user-attachments/assets/4894d0cf-eb92-421b-8b8a-d0a1522ccc0d)
 
-*** Monthly oil and gas operations in the states of Brazil.
+### Monthly oil and gas operations in the states of Brazil.
 ![image](https://github.com/user-attachments/assets/ab9b18b5-54ee-41f8-8948-9458b6e96343)
 
-*** Yearly sales of petroleum derivatives in the cities of Brazil.
+### Yearly sales of petroleum derivatives in the cities of Brazil.
 
 
