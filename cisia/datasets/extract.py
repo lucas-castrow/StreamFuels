@@ -151,7 +151,7 @@ def scrapping_sales_yearly_city(soup):
     h3_tags = soup.find_all('h3')
     list_urls = []    
     # Loop through each <h3> tag found
-    padrao_data = r'\d{2}/\d{2}/\d{4}'
+    padrao_data = r'\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}'
     file_names = []
     for h3 in h3_tags:
             # Find all <ul> tags that are after the <h3> tag
@@ -178,7 +178,8 @@ def scrapping_sales_yearly_city(soup):
                                         # se for municipio pega correto o anual
                                         if "municipio" in link_csv:
                                             derivado = (link_csv.split("/")[-2]).replace("-","")
-                                            updated_at = re.findall(padrao_data, li_tags[index].text)[0]
+                                            updated_at = re.findall(padrao_data, li_tags[index].text)
+                                            updated_at = updated_at[0]
                                             file_names.append(f'sales_yearly_city_{derivado}_{updated_at}')
                                             list_urls.append(link_csv) 
 
@@ -239,6 +240,7 @@ def scrape_for_file_links(url, data_type, frequency, location_type):
                 return scrapping_sales_monthly_state(soup) 
             elif frequency == "yearly":
                 if location_type == "city":
+                    print('entrou')
                     return scrapping_sales_yearly_city(soup)
                 elif location_type == "state":
                      return scrapping_sales_yearly_state(soup)

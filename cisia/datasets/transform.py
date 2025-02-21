@@ -537,9 +537,9 @@ def processar_derivados_municipio_ano(download_path = "./", filenames=[] , data_
 
         if derivado in ['asfalto', 'glp', 'oleocombustivel']: #estão em kgs
                 df['m3'] = df['m3'].apply(lambda kg: kg_to_m3(derivado, kg)).round(4)
-
+        
         df['timestamp'] = df['ANO']
-        df[['GRANDE REGIÃO', 'UF', 'PRODUTO', 'MUNICÍPIO']] = df[['GRANDE REGIÃO', 'UF', 'PRODUTO', 'MUNICÍPIO']].map(parse_string)
+        df[['GRANDE REGIÃO', 'UF', 'PRODUTO', 'MUNICÍPIO']] = df[['GRANDE REGIÃO', 'UF', 'PRODUTO', 'MUNICÍPIO']].applymap(parse_string)
         max_date, min_date = obter_max_min_datas(df, 'timestamp', 'ano')
         combinacoes = combinar_valores_unicos_colunas(df, ['UF', 'PRODUTO', 'MUNICÍPIO'])
         
