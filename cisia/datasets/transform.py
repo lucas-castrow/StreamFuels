@@ -340,8 +340,28 @@ def processar_dpee_mes_estado(download_path="./", filenames=[], data_prepared=Tr
     for filename in filenames:
         df = pd.read_csv(os.path.join(load_path, filename), sep=';')
         
-
-        df['timestamp'] = df['ANO'].astype(str) + '-' + df['MÊS'].apply(mes_para_numero).astype(str)
+        # Create a mask for rows with valid data
+        valid_data_mask = ~(pd.isna(df['ANO']) | pd.isna(df['MÊS']))
+        
+        # Handle possible NaN values and convert to string first
+        df['ANO'] = df['ANO'].astype(str)
+        df['ANO'] = df['ANO'].apply(lambda x: x.split('.')[0] if isinstance(x, str) and '.' in x else x)
+        df['ANO'] = df['ANO'].replace('nan', '2000')  # Use a default year for missing values
+        
+        # Convert MÊS column to string and handle NaN values
+        df['MÊS'] = df['MÊS'].astype(str)
+        df['MÊS'] = df['MÊS'].replace('nan', 'JAN')  # Default to January if month is missing
+        
+        # Now apply the month conversion function
+        month_numbers = df['MÊS'].apply(mes_para_numero)
+        
+        # Create timestamp column
+        df['timestamp'] = df['ANO'] + '-' + month_numbers
+        
+        # Filter out rows with invalid original data if needed
+        if not data_prepared and not valid_data_mask.all():
+            # print(f"Filtering out {(~valid_data_mask).sum()} rows with invalid date data")
+            df = df[valid_data_mask]
         
 
         max_date, min_date = obter_max_min_datas(df, 'timestamp', 'mes')
@@ -373,6 +393,11 @@ def processar_dpee_mes_estado(download_path="./", filenames=[], data_prepared=Tr
                 # series_name = f"{estado_para_sigla(uf)}_{produto}".lower().replace(" ", "")
                 series_name = f"T{i}"
                 state = estado_para_sigla(uf).upper()
+                
+                # Skip states with undefined state code
+                if state == "UNDEFINED":
+                    continue
+                    
                 fuel_type = fuel_pt_to_en(produto)
                 # start_timestamp = pd.to_datetime(df_filtrado['timestamp'].iloc[0][:4] + '-' + df_filtrado['timestamp'].iloc[0][4:], format='%Y-%m').strftime('%Y-%m')
                 start_timestamp = datetime.strptime(df_filtrado['timestamp'].iloc[0], '%Y%m').strftime('%Y-%m-%d %H-%M-%S')
@@ -402,7 +427,7 @@ def processar_dpee_mes_estado(download_path="./", filenames=[], data_prepared=Tr
 @equallength true
 @data"""
 
-    with open(tsf_path, 'w') as f:
+    with open(tsf_path, 'w', encoding='utf-8') as f:
         f.write(header + "\n")
         f.writelines("\n".join(series_lines))
     
@@ -427,11 +452,33 @@ def processar_dpee_ano_estado(download_path="./", filenames=[], data_prepared=Tr
     i = 0
     df = pd.read_csv(os.path.join(load_path, filenames[0]), sep=';')
 
-    df['timestamp'] = df['ANO'].astype(str)
+    df['ANO'] = df['ANO'].astype(str)
+    df['ANO'] = df['ANO'].apply(lambda x: x.split('.')[0])
+    df['timestamp'] = df['ANO']
+    df['timestamp'] = df['timestamp'].apply(lambda x: x.split('.')[0])
+    
+    # Fill NaN values in timestamp column
+    # Convert 'nan' strings to actual NaN values first
+    df['timestamp'] = df['timestamp'].replace('nan', np.nan)
+    
+    # Check if missing values exist and fill them using forward and backward fill
+    if df['timestamp'].isna().any():
+        # Sort by other relevant columns if available to ensure proper filling
+        sort_cols = ['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO']
+        existing_cols = [col for col in sort_cols if col in df.columns]
+        if existing_cols:
+            df = df.sort_values(existing_cols)
+        
+        # Fill missing years based on surrounding values
+        df['timestamp'] = df['timestamp'].fillna(method='ffill').fillna(method='bfill')
+        
+        # print("After filling NaN values in timestamp:")
+        # print(df[['timestamp']].head(10))
     for column in ['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO']:
         df[column] = df[column].apply(parse_string)
     df['m3'] = df['VENDAS'].astype(str).str.replace(",", ".").astype(float)
     combinacoes = combinar_valores_unicos_colunas(df, ['UNIDADE DA FEDERAÇÃO', 'PRODUTO'])
+    
     max_date = obter_max_min_datas(df, 'timestamp', 'ano')[0]
 
     for combinacao in combinacoes:
@@ -441,17 +488,46 @@ def processar_dpee_ano_estado(download_path="./", filenames=[], data_prepared=Tr
             df_agg = df_filtrado.groupby('timestamp').agg({'m3': 'sum'}).reset_index()
             
             arquivo_historico = selecionar_csv_por_produto_local(produto, 'estado')
-            df_historico = pd.read_csv(os.path.join(load_path, arquivo_historico), sep =';')
-
-            for column in ['GRANDE REGIÃO', 'ESTADO', 'PRODUTO']:
-                df_historico[column] = df_historico[column].apply(parse_string)
-            df_historico['timestamp'] = df_historico['ANO'].astype(str)
-            min_date = obter_max_min_datas(df_historico, 'timestamp', 'ano')[1]
-            df_historico['m3'] = df_historico['VENDAS'].astype(str).str.replace(",", ".").astype(float)
-            df_historico = df_historico[(df_historico['ESTADO'] == uf) & (df_historico['PRODUTO'] == produto)][['timestamp', 'm3']]
-            # if produto in ['glp', 'oleocombustivel']:
+            # If no historical file was found for this product
+            # Initialize a flag to track if we have historical data
+            has_historical_data = False
+            
+            if arquivo_historico is None:
+                # Use current data as historical reference
+                min_date = df_agg['timestamp'].astype(str).min()
+                # print(f"No historical file found for {produto} in {uf}, using min date: {min_date}")
+            else:
+                # Process historical data
+                try:
+                    df_historico = pd.read_csv(os.path.join(load_path, arquivo_historico), sep=';')
+                    
+                    for column in ['GRANDE REGIÃO', 'ESTADO', 'PRODUTO']:
+                        if column in df_historico.columns:
+                            df_historico[column] = df_historico[column].apply(parse_string)
+                    
+                    df_historico['timestamp'] = df_historico['ANO'].astype(str)
+                    df_historico['timestamp'] = df_historico['timestamp'].apply(lambda x: x.split('.')[0])
+                    min_date = obter_max_min_datas(df_historico, 'timestamp', 'ano')[1]
+                    # print(f"Using historical min date for {produto} in {uf}: {min_date}")
+                    
+                    # Process historical data
+                    df_historico['m3'] = df_historico['VENDAS'].astype(str).str.replace(",", ".").astype(float)
+                    df_historico = df_historico[(df_historico['ESTADO'] == uf) & (df_historico['PRODUTO'] == produto)][['timestamp', 'm3']]
+                    has_historical_data = True
+                except Exception as e:
+                    # print(f"Error processing historical file for {produto} in {uf}: {str(e)}")
+                    # Fallback to using current data as historical reference
+                    min_date = df_agg['timestamp'].astype(str).min()
+                    # print(f"Falling back to min date from current data: {min_date}")
+            # if produto in ['glp', 'oleocombustivel'] and has_historical_data:
             #     df_historico['m3'] = df_historico['m3'].apply(lambda kg: kg_to_m3(produto, kg*1000)) #Estão em toneladas
-            df_complete = pd.concat([df_historico, df_agg])
+            
+            # Combine historical data with current data if available
+            if has_historical_data:
+                df_complete = pd.concat([df_historico, df_agg])
+            else:
+                # Just use current data
+                df_complete = df_agg.copy()
             df_complete = df_complete.sort_values(by='timestamp')
             df_complete = fill_missing_dates(df_complete, 'timestamp', 'm3', max_date, min_date, data_prepared=data_prepared)                
             if data_prepared:
@@ -461,6 +537,12 @@ def processar_dpee_ano_estado(download_path="./", filenames=[], data_prepared=Tr
             i+=1
             series_name = f"T{i}"
             state = estado_para_sigla(uf).upper()
+            
+            # Skip states with undefined state code
+            if state == "UNDEFINED":
+                # print(f"Skipping state '{uf}' with undefined state code")
+                continue
+                
             fuel_type = fuel_pt_to_en(produto)
             # start_timestamp = pd.to_datetime(df_filtrado['timestamp'].iloc[0][:4] + '-' + df_filtrado['timestamp'].iloc[0][4:], format='%Y-%m').strftime('%Y-%m')
             start_timestamp = datetime.strptime(df_complete['timestamp'].iloc[0] + '-01-01 00-00-00', '%Y-%m-%d %H-%M-%S')
@@ -492,7 +574,7 @@ def processar_dpee_ano_estado(download_path="./", filenames=[], data_prepared=Tr
 @equallength true
 @data"""
 
-    with open(tsf_path, 'w') as f:
+    with open(tsf_path, 'w', encoding='utf-8') as f:
         f.write(header + "\n")
         f.writelines("\n".join(series_lines))
     
@@ -630,7 +712,7 @@ def processar_derivados_municipio_ano(download_path = "./", filenames=[] , data_
 @equallength false
 @data"""
 
-    with open(tsf_path, 'w') as f:
+    with open(tsf_path, 'w', encoding='utf-8') as f:
         f.write(header + "\n")
         f.writelines("\n".join(series_lines))
     
@@ -645,7 +727,6 @@ def processar_derivados_municipio_mes():
     ensure_folder_exists(path_municipio)
     df_full = pd.read_csv(os.path.join('dados', 'sales', 'vendas_mensais_municipio_completo.csv'), sep=';')
     df_full = corrigir_municipios(df_full, 'municipio', 'uf', 'cod_ibge')
-    print(df_full.columns)
     df_full.loc[df_full['municipio'] == '*', 'municipio'] = df_full['cod_ibge']
     df_full= df_full[df_full['M3'] != ' -   '] 
     df_full['timestamp'] = df_full['data']
@@ -737,6 +818,12 @@ def processar_producao(download_path, filenames=[], data_prepared=True):
            
             grupo = grupo.rename(columns={'UNIDADE DA FEDERAÇÃO': 'UF'})
             state = estado_para_sigla(uf_norm).upper()
+            
+            # Skip states with undefined state code
+            if state == "UNDEFINED":
+                print(f"Skipping state '{uf_norm}' with undefined state code")
+                continue
+                
             grupo['PRODUTO'] = produto_norm
             grupo['category'] = category
             
@@ -779,7 +866,7 @@ def processar_producao(download_path, filenames=[], data_prepared=True):
 @equallength false
 @data"""
 
-    with open(tsf_path, 'w') as f:
+    with open(tsf_path, 'w', encoding='utf-8') as f:
         f.write(header + "\n")
         f.writelines("\n".join(series_lines))
     

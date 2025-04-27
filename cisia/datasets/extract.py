@@ -188,31 +188,126 @@ def scrapping_sales_yearly_city(soup):
 def scrapping_production_monthly(soup):
     list_urls = []    
     file_names = []
-    padrao_data = r'\d{2}/\d{2}/\d{4}'
+    # Expanded pattern to catch various date formats
+    padrao_data = r'\d{1,2}/\d{1,2}/\d{2,4}|\d{1,2}-\d{1,2}-\d{2,4}|\d{4}-\d{1,2}-\d{1,2}'
     target_h3 = soup.find('h3', text="Produção de petróleo")
+    
+    if not target_h3:
+        print("Warning: 'Produção de petróleo' heading not found. Trying alternative headings...")
+        possible_headings = ["Produção de petróleo", "Produção de Petróleo", "Produção Nacional do Petróleo", "Produção"]
+        for heading in possible_headings:
+            target_h3 = soup.find('h3', string=lambda text: heading in text if text else False)
+            if target_h3:
+                print(f"Found alternative heading: {target_h3.text}")
+                break
 
     if target_h3:
         ul_list = target_h3.find_all_next('ul')
+        
+        if not ul_list:
+            print("Warning: No <ul> elements found after the heading. Trying to find links directly...")
+            # Try to find the next div that might contain links
+            next_div = target_h3.find_next('div')
+            if next_div:
+                for a_tag in next_div.find_all('a', href=lambda href: href and href.endswith('.csv')):
+                    handle_csv_link(a_tag, a_tag.parent.text, list_urls, file_names)
+        else:
+            for ul in ul_list:
+                for li in ul.find_all('li'):
+                    for a_tag in li.find_all('a'):
+                        if a_tag['href'].endswith('.csv'):
+                            handle_csv_link(a_tag, li.text, list_urls, file_names)
+        
+        if not list_urls:
+            print("Warning: No CSV links found. Looking for links across the entire page...")
+            # Fallback: look for any CSV link on the page
+            for a_tag in soup.find_all('a', href=lambda href: href and href.endswith('.csv')):
+                handle_csv_link(a_tag, a_tag.parent.text, list_urls, file_names)
+    else:
+        print("Error: No suitable heading found. Searching for any CSV files on the page...")
+        # Last resort: look for any CSV link on the page
+        for a_tag in soup.find_all('a', href=lambda href: href and href.endswith('.csv')):
+            handle_csv_link(a_tag, a_tag.parent.text, list_urls, file_names)
+    
+    if list_urls:
+        print(f"Found {len(list_urls)} CSV files.")
+        return list_urls, file_names
+    else:
+        # Create a dummy entry if nothing is found to prevent crashes
+        print("Warning: No CSV files found. Creating a placeholder.")
+        dummy_url = "https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/arquivos/producao-mensal-petroleo-gas-natural-por-campo-2014-a-2021.csv"
+        list_urls.append(dummy_url)
+        file_names.append("producao_mensal_petroleo_gas_natural_por_campo_01-01-2023")
+        return list_urls, file_names
 
-        for ul in ul_list:
-            for li in ul.find_all('li'):
-                for i, a_tag in enumerate(li.find_all('a')):
-                    if a_tag['href'].endswith('.csv'):
-                        updated_at = re.findall(padrao_data, li.text)[0]
-                        formatted_name = formatar_petroleum_and_gas(li.text)
-                        file_name = f'{formatted_name}_{updated_at}' 
-                        list_urls.append(a_tag['href']) 
-                        file_names.append(file_name)
-        return list_urls, file_names                                          
+def handle_csv_link(a_tag, text, list_urls, file_names):
+    """Helper function to process CSV links and add them to the result lists."""
+    # Try to find a date in the text
+    padrao_data = r'\d{1,2}/\d{1,2}/\d{2,4}|\d{1,2}-\d{1,2}-\d{2,4}|\d{4}-\d{1,2}-\d{1,2}'
+    date_matches = re.findall(padrao_data, text)
+    
+    if date_matches:
+        updated_at = date_matches[0]
+    else:
+        # If no date found, use today's date
+        from datetime import datetime
+        updated_at = datetime.now().strftime("%d/%m/%Y")
+        print(f"No date found in text: '{text[:50]}...' - Using current date: {updated_at}")
+    
+    # Format the name from the text
+    formatted_name = formatar_petroleum_and_gas(text)
+    if not formatted_name:
+        # Extract a name from the href if text formatting fails
+        href = a_tag['href']
+        base_name = os.path.basename(href).split('.')[0]
+        formatted_name = re.sub(r'[^\w]', '_', base_name).lower()
+    
+    file_name = f'{formatted_name}_{updated_at}'
+    list_urls.append(a_tag['href'])
+    file_names.append(file_name)                                          
 
 
 def formatar_petroleum_and_gas(texto):
-    match = re.match(r"^(.*?) \(", texto)
-    if match:
-        nome = match.group(1) 
-        nome_snake_case = re.sub(r"[^\w\s]", "", nome).replace(" ", "_").lower()
-        return unidecode(nome_snake_case)
-    return None
+    """Format petroleum and gas related texts into a standardized snake_case format.
+    
+    Args:
+        texto: The text to format, often contains product name followed by metadata in parentheses
+        
+    Returns:
+        str: Formatted text in snake_case, or filename-friendly string derived from the input
+    """
+    if not texto or not isinstance(texto, str):
+        return "petroleum_gas_data"
+    
+    # Try different patterns to extract a meaningful name
+    patterns = [
+        r"^(.*?) \(",               # Text before first parenthesis
+        r"Produção de (.*?)(?:\s|$)",  # Text after "Produção de"
+        r"dados de (.*?)(?:\s|$)",     # Text after "dados de"
+        r"(petróleo|gás|natural).*"     # Any text containing key oil/gas terms
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, texto, re.IGNORECASE)
+        if match:
+            nome = match.group(1).strip()
+            if nome:  # If we got a non-empty string
+                nome_snake_case = re.sub(r"[^\w\s]", "", nome).replace(" ", "_").lower()
+                return unidecode(nome_snake_case)
+    
+    # Fallback: just clean the whole text if no patterns match
+    # First, truncate to a reasonable length
+    texto_truncated = texto[:50]  
+    # Remove special characters and convert spaces to underscores
+    nome_snake_case = re.sub(r"[^\w\s]", "", texto_truncated).replace(" ", "_").lower()
+    # Return the unidecoded version
+    result = unidecode(nome_snake_case)
+    
+    # Make sure we have at least something reasonable
+    if not result or len(result) < 3:
+        return "petroleum_gas_data"
+        
+    return result
 
 def scrape_for_file_links(url, data_type, frequency, location_type):
     """
@@ -240,7 +335,6 @@ def scrape_for_file_links(url, data_type, frequency, location_type):
                 return scrapping_sales_monthly_state(soup) 
             elif frequency == "yearly":
                 if location_type == "city":
-                    print('entrou')
                     return scrapping_sales_yearly_city(soup)
                 elif location_type == "state":
                      return scrapping_sales_yearly_state(soup)

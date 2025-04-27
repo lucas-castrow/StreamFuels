@@ -160,7 +160,7 @@ class DatasetLoader:
         found_data_section = False
         started_reading_data_section = False
 
-        with open(path_tsf, "r", encoding="cp1252") as file:
+        with open(path_tsf, "r", encoding="utf-8") as file:
             for line in file:
                 # Strip white space from start/end of line
                 line = line.strip()

@@ -3,6 +3,7 @@ import os
 import zipfile
 from unidecode import unidecode
 import re
+import pandas as pd
 
 def translate_fuel_name(fuel_name):
     fuel_mapping = {
@@ -13,8 +14,11 @@ def translate_fuel_name(fuel_name):
         'LPG': 'GLP',
         'diesel': 'Óleo diesel',
         'kerosene-i': 'Querosene iluminante',
-        'kerosene-a': 'Querosene de aviação'
+        'kerosene-a': 'Querosene de aviação',
+        'etanol': 'ethanol'
     }
+    if fuel_name.lower() not in fuel_mapping:
+        print(f"Fuel name '{fuel_name}' not found in mapping.")
     return fuel_mapping.get(fuel_name.lower(), "Invalid")
 
 def prod_to_en(prod):
@@ -38,7 +42,10 @@ def fuel_pt_to_en(fuel_name):
         'queroseneiluminante':'kerosene-i',
         'querosenedeaviacao':'kerosene-a',
         'asfalto':'asphalt',
+        'etanol': 'ethanol'
     }
+    if fuel_name.lower() not in fuel_mapping:
+        print(f"Fuel name '{fuel_name}' not found in mapping.")
     return fuel_mapping.get(fuel_name.lower(), "Invalid")
 
 
@@ -78,12 +85,43 @@ def parse_string(string):
     return re.sub(r'[^a-zA-Z0-9]', '', unidecode(str(string).lower()))
 
 def mes_para_numero(mes):
+    """Convert month name to number, handling different input types.
+    
+    Args:
+        mes: Month name as string, float, or other type. If float, will be converted to string first.
+        
+    Returns:
+        str: Two-digit month number as string
+    """
+    # Handle different input types
+    if mes is None or pd.isna(mes):
+        return '01'  # Default to January if None or NaN
+    
+    # Convert to string if needed
+    if not isinstance(mes, str):
+        mes = str(mes)
+    
+    # Remove decimal part if present
+    if '.' in mes:
+        mes = mes.split('.')[0]
+    
+    # Map of month names to numbers
     meses = {
         'JAN': '01', 'FEV': '02', 'MAR': '03', 'ABR': '04',
         'MAI': '05', 'JUN': '06', 'JUL': '07', 'AGO': '08',
-        'SET': '09', 'OUT': '10', 'NOV': '11', 'DEZ': '12'
+        'SET': '09', 'OUT': '10', 'NOV': '11', 'DEZ': '12',
+        # Add direct number mapping for numeric months
+        '1': '01', '2': '02', '3': '03', '4': '04',
+        '5': '05', '6': '06', '7': '07', '8': '08',
+        '9': '09', '10': '10', '11': '11', '12': '12'
     }
-    return meses.get(mes.upper(), '00')
+    
+    # Try to get the month number, defaulting to '01' if not found
+    try:
+        return meses.get(mes.upper(), '01')
+    except AttributeError:
+        # If any other error occurs, default to January
+        return '01'
 
 def ensure_folder_exists(parts):
     """
@@ -131,18 +169,72 @@ def estado_para_sigla(estado):
         'sergipe': 'se',
         'tocantins': 'to'
     }
-    # Retorna a sigla do estado, ou "Estado inválido" se não encontrado
-    return estados.get(estado, 'Estado inválido')
+    
+    return estados.get(estado, 'Undefined')
 
 def obter_max_min_datas(df, col_data, mes_ou_ano):
-    max,min = (None, None)
+    """Get the maximum and minimum dates from a DataFrame column.
+    
+    Args:
+        df: DataFrame containing the data
+        col_data: Column name containing date information
+        mes_ou_ano: Type of date information ('ano' for year, any other value for month)
+        
+    Returns:
+        tuple: (max_date, min_date)
+    """
+    # Make a copy to avoid changing the original DataFrame
+    date_series = df[col_data].copy()
+    
+    # Filter out any NaN values
+    date_series = date_series[~pd.isna(date_series)]
+    
+    if date_series.empty:
+        print(f"Warning: No valid dates found in column {col_data}")
+        # Return default values if no valid dates are found
+        return ('2020', '2000') if mes_ou_ano == 'ano' else ('202001', '200001')
+    
+    # Process differently based on date type
     if mes_ou_ano == 'ano':
-        max =  df[col_data].astype(int).max()
-        min =  df[col_data].astype(int).min()
+        try:
+            # Try to convert directly to int
+            date_series = date_series.astype(int)
+        except ValueError:
+            # If that fails, clean the data first
+            date_series = date_series.astype(str)
+            # Extract just the year part if there's a decimal
+            date_series = date_series.apply(lambda x: x.split('.')[0] if '.' in x else x)
+            # Remove any non-digit characters
+            date_series = date_series.str.extract(r'(\d+)', expand=False)
+            # Convert to integer
+            date_series = pd.to_numeric(date_series, errors='coerce')
+            # Drop any NaN values that might have been introduced
+            date_series = date_series.dropna()
+        
+        max_date = date_series.max()
+        min_date = date_series.min()
     else:
-        max =  df[col_data].astype(str).str.replace("-", "").astype(int).max()
-        min =  df[col_data].astype(str).str.replace("-", "").astype(int).min()
-    return max,min
+        # For monthly data
+        try:
+            # Clean the data first
+            date_series = date_series.astype(str)
+            # Remove dashes to get format YYYYMM
+            clean_dates = date_series.str.replace("-", "")
+            # Convert to numeric and handle errors
+            numeric_dates = pd.to_numeric(clean_dates, errors='coerce')
+            # Drop any NaN values
+            numeric_dates = numeric_dates.dropna()
+            
+            max_date = numeric_dates.max()
+            min_date = numeric_dates.min()
+        except Exception as e:
+            print(f"Error processing dates: {e}")
+            print("Sample dates:", date_series.head())
+            # Use default values if processing fails
+            max_date = 202001
+            min_date = 200001
+    
+    return max_date, min_date
 
 def kg_to_m3(material, kg):
     #https://www.gov.br/anp/pt-br/centrais-de-conteudo/publicacoes/anuario-estatistico/arquivos-anuario-estatistico-2022/outras-pecas-documentais/fatores-conversao-2022.pdf

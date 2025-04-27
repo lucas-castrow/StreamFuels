@@ -1,2 +1,4 @@
 cisia.egg-info/
 __pycache__/
+cisia/__pycache__/
+cisia/datasets/__pycache__/
