@@ -51,7 +51,7 @@ def fuel_pt_to_en(fuel_name):
 
 def get_default_download_dir():
     """Return the default directory for downloads."""
-    default_dir = os.path.join(os.path.expanduser("~"), ".cisia")
+    default_dir = os.path.join(os.path.expanduser("~"), ".streamfuels")
     if not os.path.exists(default_dir):
         os.makedirs(default_dir)
     return default_dir

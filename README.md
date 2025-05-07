@@ -1,6 +1,6 @@
-# Cisia
+# StreamFuels
 
-Cisia is a collection of implementations designed to assist researchers with newly developed papers, both from our own team and other outstanding scientific papers.
+StreamFuels is a collection of tools for processing and analyzing fuel market data, focusing on petroleum derivatives, natural gas, and biofuels market across different regions of Brazil.
 
 ***sales_monthly_state()***: 
 Monthly fuel sales data by state from the ANP database
@@ -19,7 +19,7 @@ Monthly oil production, LGN production, natural gas production, reinjection, fla
 <!-- ## Installation
 
 ```bash
-pip install cisia
+pip install streamfuels
 ``` -->
 
 
@@ -32,7 +32,7 @@ pip install -e .
 After that you can import using the target python environment:
 
 ```python
-from cisia.datasets import DatasetLoader
+from streamfuels.datasets import DatasetLoader
 loader = DatasetLoader()
 result, flag = loader.yearly_sales_state()
 
