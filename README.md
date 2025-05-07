@@ -5,13 +5,13 @@ Cisia is a collection of implementations designed to assist researchers with new
 ***sales_monthly_state()***: 
 Monthly fuel sales data by state from the ANP database
     
-***sales_yearly_state()***: 
+***yearly_sales_state()***: 
 Yearly fuel sales data by state from ANP database
 
-***sales_yearly_city()***: 
+***yearly_sales_city()***: 
 Yearly fuel sales data by city from ANP database
 
-***oil_gas_operations_monthly_state()***: 
+***monthly_operations_state()***: 
 Monthly oil production, LGN production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
   
 
@@ -34,14 +34,14 @@ After that you can import using the target python environment:
 ```python
 from cisia.datasets import DatasetLoader
 loader = DatasetLoader()
-result, flag = loader.sales_yearly_state()
+result, flag = loader.yearly_sales_state()
 
 df, metadata = loader.read_tsf(path_tsf=result)
 ```
 
 ### Yearly sales of petroleum derivatives in the states of Brazil.
 ```python
-result, flag = loader.sales_yearly_state()
+result, flag = loader.yearly_sales_state()
 ```
 ![image](https://github.com/user-attachments/assets/ab1d0ac8-9574-4229-81e6-2e3ef32e959c)
 
@@ -53,13 +53,13 @@ result, flag = loader.sales_monthly_state()
 
 ### Monthly oil and gas operations in the states of Brazil.
 ```python
-result, flag = loader.oil_gas_operations_monthly_state()
+result, flag = loader.monthly_operations_state()
 ```
 ![image](https://github.com/user-attachments/assets/ab9b18b5-54ee-41f8-8948-9458b6e96343)
 
 ### Yearly sales of petroleum derivatives in the cities of Brazil.
 ```python
-result, flag = loader.sales_yearly_city()
+result, flag = loader.yearly_sales_city()
 ```
 ![image](https://github.com/user-attachments/assets/26ac0d96-73f9-43a8-b9bf-47106cafeba4)
 

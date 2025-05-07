@@ -8,11 +8,11 @@ class DatasetLoader:
     
     sales_monthly_state(): monthly fuel sales data by state from the ANP database
     
-    sales_yearly_state(): yearly fuel sales data by state from ANP database
+    yearly_sales_state(): yearly fuel sales data by state from ANP database
     
-    sales_yearly_city(): yearly fuel sales data by city from ANP database
+    yearly_sales_city(): yearly fuel sales data by city from ANP database
 
-    oil_gas_operations_monthly_state(): monthly oil production, LGN production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
+    monthly_operations_state(): monthly oil production, LGN production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
     
     """
 
@@ -41,7 +41,7 @@ class DatasetLoader:
         return tsf_path, isUpdated
     
     @staticmethod
-    def sales_yearly_state(download_path='./', data_prepared=True):
+    def yearly_sales_state(download_path='./', data_prepared=True):
         """
         Processes and returns the path to the TSF file containing yearly sales data by state from ANP database. 
         It also indicates if the data is the most recently updated.
@@ -63,7 +63,7 @@ class DatasetLoader:
         return tsf_path, isUpdated
     
     @staticmethod
-    def sales_yearly_city(download_path='./', data_prepared=True):
+    def yearly_sales_city(download_path='./', data_prepared=True):
         """
         Processes and returns the path to the TSF file containing yearly sales data by city from ANP database.
         It also indicates if the data is the most recently updated.
@@ -86,7 +86,7 @@ class DatasetLoader:
     
     
     @staticmethod
-    def oil_gas_operations_monthly_state(download_path='./'):
+    def monthly_operations_state(download_path='./'):
         """
        Processes and returns the path to the TSF file containing monthly oil production, LGN production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
        It also indicates if the data is the most recently updated.

@@ -444,9 +444,9 @@ def processar_dpee_ano_estado(download_path="./", filenames=[], data_prepared=Tr
     filenames, _ = download_anp_data(data_type="sales", location_type="state", frequency="monthly")
     
     series_lines = []
-    nome_arquivo = 'fuel_sales_state_yearly.tsf'
+    nome_arquivo = 'yearly_fuel_sales_by_state.tsf'
     if not data_prepared:    
-        nome_arquivo = 'fuel_sales_state_yearly_not_prepared.tsf'
+        nome_arquivo = 'yearly_fuel_sales_by_state_not_prepared.tsf'
         
     tsf_path = os.path.join(download_path, nome_arquivo)
     i = 0
@@ -591,9 +591,9 @@ def processar_derivados_municipio_ano(download_path = "./", filenames=[] , data_
     dic_series_excluidas = {'uf':[], 'produto': [], 'municipio': [], 'dados_faltantes':[]}
     dic_series_inputadas = {'uf':[], 'produto': [], 'municipio': [], 'timestamps_faltantes':[]}
     series_lines = []   
-    nome_arquivo = 'fuel_sales_city_yearly.tsf'
+    nome_arquivo = 'yearly_fuel_sales_by_city.tsf'
     if not data_prepared:
-        nome_arquivo = 'fuel_sales_city_yearly_not_prepared.tsf'
+        nome_arquivo = 'yearly_fuel_sales_by_city_not_prepared.tsf'
     tsf_path = os.path.join(download_path, nome_arquivo)   
     
     if os.path.exists(tsf_path):
@@ -602,7 +602,7 @@ def processar_derivados_municipio_ano(download_path = "./", filenames=[] , data_
     
     i = 0
     for filename in tqdm(filenames, desc="Preparing datasets"):
-        #ex: sales_yearly_city_oleocombustivel_04-01-2024.csv
+        #ex: yearly_sales_city_oleocombustivel_04-01-2024.csv
         derivado = filename.split("_")[3]
         
         arquivo = filename
@@ -757,7 +757,7 @@ def processar_producao(download_path, filenames=[], data_prepared=True):
     resultado_final = pd.DataFrame()
     series_lines = []
     index = 0
-    nome_arquivo = f"petroleum_and_gas.tsf"
+    nome_arquivo = f"monthly_oilgas_operations_by_state.tsf"
     for filename in filenames:
         df = pd.read_csv(os.path.join(load_path, filename), sep=';')
         df_resultante = pd.DataFrame()
@@ -767,22 +767,22 @@ def processar_producao(download_path, filenames=[], data_prepared=True):
         
         group_cols = ['GRANDE REGIÃO', 'UNIDADE DA FEDERAÇÃO', 'PRODUTO']
 
-        category = None
+        operation = None
         qtd_col = None
         if 'PRODUÇÃO' in df.columns:
-            category = 'production'
+            operation = 'production'
             qtd_col = 'PRODUÇÃO'
         elif 'QUEIMADO' in df.columns:
-            category = 'flaring'
+            operation = 'flaring'
             qtd_col = 'QUEIMADO'
         elif 'REINJETADO' in df.columns:
-            category = 'reinjection'
+            operation = 'reinjection'
             qtd_col = 'REINJETADO'
         elif 'DISPONÍVEL' in df.columns:
-            category = 'available'
+            operation = 'available'
             qtd_col = 'DISPONÍVEL'
         elif 'CONSUMO' in df.columns:
-            category = 'self-consumption'
+            operation = 'self-consumption'
             qtd_col = 'CONSUMO'
         
         # Agrupa com base nas colunas determinadas
@@ -825,7 +825,7 @@ def processar_producao(download_path, filenames=[], data_prepared=True):
                 continue
                 
             grupo['PRODUTO'] = produto_norm
-            grupo['category'] = category
+            grupo['operation'] = operation
             
             if df_resultante.empty:
                 df_resultante = grupo
@@ -838,7 +838,7 @@ def processar_producao(download_path, filenames=[], data_prepared=True):
             values = ",".join(map(str, grupo[qtd_col].tolist()))
             index+=1
             series_name = f"T{index}"
-            series_lines.append(f"{series_name}:{start_timestamp}:{end_timestamp}:{state}:{produto_norm}:{category}:{values}")
+            series_lines.append(f"{series_name}:{start_timestamp}:{end_timestamp}:{state}:{produto_norm}:{operation}:{values}")
 
 
     tsf_path = os.path.join(download_path, nome_arquivo)
@@ -859,7 +859,7 @@ def processar_producao(download_path, filenames=[], data_prepared=True):
 @attribute end_timestamp date
 @attribute state_code string
 @attribute product string
-@attribute category string
+@attribute operation string
 @frequency monthly
 @horizon 12
 @missing false

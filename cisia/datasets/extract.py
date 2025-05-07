@@ -124,7 +124,7 @@ def scrapping_sales_monthly_state(soup):
                     
     return list_urls, file_names
 
-def scrapping_sales_yearly_state(soup):
+def scrapping_yearly_sales_state(soup):
     list_urls = []    
     file_names = []
 
@@ -147,7 +147,7 @@ def scrapping_sales_yearly_state(soup):
         return list_urls, file_names
         
 
-def scrapping_sales_yearly_city(soup):
+def scrapping_yearly_sales_city(soup):
     h3_tags = soup.find_all('h3')
     list_urls = []    
     # Loop through each <h3> tag found
@@ -180,7 +180,7 @@ def scrapping_sales_yearly_city(soup):
                                             derivado = (link_csv.split("/")[-2]).replace("-","")
                                             updated_at = re.findall(padrao_data, li_tags[index].text)
                                             updated_at = updated_at[0]
-                                            file_names.append(f'sales_yearly_city_{derivado}_{updated_at}')
+                                            file_names.append(f'yearly_sales_city_{derivado}_{updated_at}')
                                             list_urls.append(link_csv) 
 
             return list_urls, file_names
@@ -255,7 +255,7 @@ def handle_csv_link(a_tag, text, list_urls, file_names):
         print(f"No date found in text: '{text[:50]}...' - Using current date: {updated_at}")
     
     # Format the name from the text
-    formatted_name = formatar_petroleum_and_gas(text)
+    formatted_name = formatar_monthly_oilgas_operations_by_state(text)
     if not formatted_name:
         # Extract a name from the href if text formatting fails
         href = a_tag['href']
@@ -267,7 +267,7 @@ def handle_csv_link(a_tag, text, list_urls, file_names):
     file_names.append(file_name)                                          
 
 
-def formatar_petroleum_and_gas(texto):
+def formatar_monthly_oilgas_operations_by_state(texto):
     """Format petroleum and gas related texts into a standardized snake_case format.
     
     Args:
@@ -335,9 +335,9 @@ def scrape_for_file_links(url, data_type, frequency, location_type):
                 return scrapping_sales_monthly_state(soup) 
             elif frequency == "yearly":
                 if location_type == "city":
-                    return scrapping_sales_yearly_city(soup)
+                    return scrapping_yearly_sales_city(soup)
                 elif location_type == "state":
-                     return scrapping_sales_yearly_state(soup)
+                     return scrapping_yearly_sales_state(soup)
         elif data_type == "production":
             if frequency == "monthly":
                 return scrapping_production_monthly(soup)
