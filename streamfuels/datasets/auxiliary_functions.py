@@ -4,6 +4,13 @@ import zipfile
 from unidecode import unidecode
 import re
 import pandas as pd
+import numpy as np
+
+def znorm(x):
+    std = np.std(x)
+    if std == 0:
+        return x - np.mean(x)
+    return (x - np.mean(x)) / std
 
 def translate_fuel_name(fuel_name):
     fuel_mapping = {

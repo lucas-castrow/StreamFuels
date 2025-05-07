@@ -2,7 +2,7 @@
 
 StreamFuels is a collection of tools for processing and analyzing fuel market data, focusing on petroleum derivatives, natural gas, and biofuels market across different regions of Brazil.
 
-***sales_monthly_state()***: 
+***monthly_sales_state()***: 
 Monthly fuel sales data by state from the ANP database
     
 ***yearly_sales_state()***: 
@@ -47,7 +47,7 @@ result, flag = loader.yearly_sales_state()
 
 ### Monthly sales of petroleum derivatives in the states of Brazil.
 ```python
-result, flag = loader.sales_monthly_state()
+result, flag = loader.monthly_sales_state()
 ```
 ![image](https://github.com/user-attachments/assets/4894d0cf-eb92-421b-8b8a-d0a1522ccc0d)
 

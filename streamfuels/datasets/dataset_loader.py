@@ -6,7 +6,7 @@ from datetime import datetime
 class DatasetLoader:
     """ Handle datasets provided by CISIA
     
-    sales_monthly_state(): monthly fuel sales data by state from the ANP database
+    monthly_sales_state(): monthly fuel sales data by state from the ANP database
     
     yearly_sales_state(): yearly fuel sales data by state from ANP database
     
@@ -17,7 +17,7 @@ class DatasetLoader:
     """
 
     @staticmethod
-    def sales_monthly_state(download_path='./', data_prepared=True):
+    def monthly_sales_state(download_path='./', data_prepared=True):
         """
        Processes and returns the path to the TSF file containing monthly sales data by state from the ANP database.
        It also indicates if the data is the most recently updated.
@@ -38,6 +38,7 @@ class DatasetLoader:
             raise Exception("ANP website not working as expected")
       
         tsf_path = processar_dpee_mes_estado(download_path, filenames=filenames, data_prepared=data_prepared)
+        print(f"dataset downloaded at: {tsf_path}")
         return tsf_path, isUpdated
     
     @staticmethod
@@ -143,6 +144,36 @@ class DatasetLoader:
         return tsf_path
     
     @staticmethod
+    def fuel_type_classification(window_size=12, step=6, download_path='./'):
+        filename = 'fuel_type_classification.tsf'
+        filenames, _ = download_anp_data(data_type="sales", location_type="state", frequency="monthly")
+        if len(filenames) > 1:
+            raise Exception("ANP website not working as expected")
+      
+        tsf_path = processar_dpee_mes_estado(download_path, filenames=filenames, data_prepared=True)
+        
+        df, metadata = DatasetLoader.read_tsf(path_tsf=tsf_path)
+        targets = []
+        windows = []
+        for i in range(len(df)):
+            series = np.array(df.iloc[i]['series_value'])
+            target = df.iloc[i]['product']
+            for start in range(0, len(series) - window_size + 1, step):
+                window = znorm(series[start:start+window_size])
+            if not np.all(window) == 0:
+                windows.append(window)
+                targets.append(target)
+        data = np.array(windows)
+        n_features = data.shape[1]
+        column_names = [f't{i+1}' for i in range(n_features)]
+        df = pd.DataFrame(data, columns=column_names)
+        df['label'] = targets
+        df.to_csv(filename, index=False)
+        path = "/".join(tsf_path.split("/")[:-1])  
+        print(f"dataset downloaded at: {os.path.join(path, filename)}")
+        return df
+    
+    @staticmethod
     def read_tsf(
     path_tsf,
     replace_missing_vals_with="NaN",
@@ -162,11 +193,10 @@ class DatasetLoader:
 
         with open(path_tsf, "r", encoding="utf-8") as file:
             for line in file:
-                # Strip white space from start/end of line
                 line = line.strip()
 
                 if line:
-                    if line.startswith("@"):  # Read meta-data
+                    if line.startswith("@"):
                         if not line.startswith("@data"):
                             line_content = line.split(" ")
                             if line.startswith("@attribute"):
@@ -260,7 +290,7 @@ class DatasetLoader:
                                 else:
                                     raise Exception(
                                         "Invalid attribute type."
-                                    )  # Currently, the code supports only numeric, string and date types. Extend this as required.
+                                    )  
 
                                 if att_val is None:
                                     raise Exception("Invalid attribute value.")

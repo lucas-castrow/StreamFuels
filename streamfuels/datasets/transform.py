@@ -431,7 +431,6 @@ def processar_dpee_mes_estado(download_path="./", filenames=[], data_prepared=Tr
         f.write(header + "\n")
         f.writelines("\n".join(series_lines))
     
-    print(f"dataset downloaded at: {tsf_path}")
     return tsf_path
 
 #processa o arquivo raw_data/venda/vendas-combustiveis-m3-1990-2023.csv

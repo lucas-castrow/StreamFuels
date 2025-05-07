@@ -90,7 +90,7 @@ def scrapping_venda_url(soup, fuel_type, location_type):
     return list_urls, file_name
 
 
-def scrapping_sales_monthly_state(soup):
+def scrapping_monthly_sales_state(soup):
     list_urls = []    
     file_names = []
     header = soup.find(lambda tag: tag.name in ["h1", "h2", "h3", "h4", "h5", "h6"] and "Vendas de derivados de petróleo e etanol" in tag.text)
@@ -106,7 +106,7 @@ def scrapping_sales_monthly_state(soup):
                     span_tag = li_tag.find('span')
                     updated_at = span_tag.get_text() if span_tag else None
                     list_urls.append(link)
-                    file_names.append(f'sales_monthly_state_{updated_at}')
+                    file_names.append(f'monthly_sales_state_{updated_at}')
                     
                     return list_urls, file_names
         
@@ -120,7 +120,7 @@ def scrapping_sales_monthly_state(soup):
     #             span_tag = li_tag.find('span')
     #             updated_at = span_tag.get_text() if span_tag else None
     #             list_urls.append(link)
-    #             file_name = f'sales_monthly_state_{updated_at}' 
+    #             file_name = f'monthly_sales_state_{updated_at}' 
                     
     return list_urls, file_names
 
@@ -332,7 +332,7 @@ def scrape_for_file_links(url, data_type, frequency, location_type):
         
         if data_type == "sales":
             if frequency == "monthly":
-                return scrapping_sales_monthly_state(soup) 
+                return scrapping_monthly_sales_state(soup) 
             elif frequency == "yearly":
                 if location_type == "city":
                     return scrapping_yearly_sales_city(soup)
