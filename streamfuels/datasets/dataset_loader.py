@@ -12,7 +12,7 @@ class DatasetLoader:
     
     yearly_sales_city(): yearly fuel sales data by city from ANP database
 
-    monthly_operations_state(): monthly oil production, LGN production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
+    monthly_operations_state(): monthly oil production, NGL production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
     
     """
 
@@ -89,7 +89,7 @@ class DatasetLoader:
     @staticmethod
     def monthly_operations_state(download_path='./'):
         """
-       Processes and returns the path to the TSF file containing monthly oil production, LGN production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
+       Processes and returns the path to the TSF file containing monthly oil production, NGL production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
        It also indicates if the data is the most recently updated.
 
         Args:
@@ -160,9 +160,9 @@ class DatasetLoader:
             target = df.iloc[i]['product']
             for start in range(0, len(series) - window_size + 1, step):
                 window = znorm(series[start:start+window_size])
-            if not np.all(window) == 0:
-                windows.append(window)
-                targets.append(target)
+                if not np.all(window) == 0:
+                    windows.append(window)
+                    targets.append(target)
         data = np.array(windows)
         n_features = data.shape[1]
         column_names = [f't{i+1}' for i in range(n_features)]

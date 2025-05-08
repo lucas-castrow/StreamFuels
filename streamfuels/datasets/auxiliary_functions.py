@@ -31,7 +31,7 @@ def translate_fuel_name(fuel_name):
 def prod_to_en(prod):
     prods = {
         'petroleo': 'petroleum',
-        'lgn': 'lgn',      
+        'lgn': 'NGL',      
         'gasnatural': 'natural gas'
         
     }

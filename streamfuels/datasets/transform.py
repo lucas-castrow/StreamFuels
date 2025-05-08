@@ -332,9 +332,9 @@ def processar_dpee_mes_estado(download_path="./", filenames=[], data_prepared=Tr
     file_path = get_default_download_dir()
     load_path = os.path.join(file_path, load_path)
     series_lines = []
-    nome_arquivo = 'fuel_sales_state_monthly.tsf'
+    nome_arquivo = 'monthly_fuel_sales_by_state.tsf'
     if not data_prepared:
-        nome_arquivo = 'fuel_sales_state_monthly_not_prepared.tsf'
+        nome_arquivo = 'monthly_fuel_sales_by_state_not_prepared.tsf'
     tsf_path = os.path.join(download_path, nome_arquivo)
 
     for filename in filenames:

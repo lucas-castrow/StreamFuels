@@ -12,7 +12,7 @@ Yearly fuel sales data by state from ANP database
 Yearly fuel sales data by city from ANP database
 
 ***monthly_operations_state()***: 
-Monthly oil production, LGN production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
+Monthly oil production, NGL production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
   
 
 
