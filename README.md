@@ -1,6 +1,8 @@
 # StreamFuels
 
-StreamFuels is a collection of tools for processing and analyzing fuel market data, focusing on petroleum derivatives, natural gas, and biofuels market across different regions of Brazil.
+StreamFuels is a collection of updated fuel sales datasets for forecasting,
+classification, and pattern analysis, focusing on petroleum derivatives, natural gas, and biofuels market across different regions of Brazil.
+
 
 ***monthly_sales_state()***: 
 Monthly fuel sales data by state from the ANP database
@@ -16,17 +18,17 @@ Monthly oil production, NGL production, natural gas production, reinjection, fla
   
 
 
-<!-- ## Installation
+## Installation
 
 ```bash
 pip install streamfuels
-``` -->
+```
 
 
-To run locally, in your target python environment and in this project folder type:
+<!-- To run locally, in your target python environment and in this project folder type:
 ```bash
 pip install -e .
-```
+``` -->
 
 
 After that you can import using the target python environment:
