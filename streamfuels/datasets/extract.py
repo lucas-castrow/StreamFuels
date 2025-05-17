@@ -421,21 +421,61 @@ def download_file_directly(url, folder, filename=None, max_retries=10):
 
     return False
 
-def download_anp_data(data_type="sales", location_type="state", frequency="monthly"):
+def download_github_backup(file_name, download_path='./'):
+    """
+    Download backup dataset files from GitHub when ANP website scraping fails.
+    
+    Args:
+        file_name (str): Name of the backup file to download
+        download_path (str): Directory where the file will be saved. Default is './'.
+        
+    Returns:
+        str: Path to the downloaded file, or None if download failed
+    """
+    try:
+        import subprocess
+        import tempfile
+        import shutil
+        
+        print(f"Trying to download backup dataset {file_name}")
+        
+        temp_dir = tempfile.mkdtemp()
+        
+        clone_command = ["git", "clone", "https://github.com/lucas-castrow/datasets_streamfuels.git", temp_dir]
+        subprocess.run(clone_command, check=True, capture_output=True)
+        
+        backup_file_path = os.path.join(temp_dir, file_name)
+        if os.path.exists(backup_file_path):
+            os.makedirs(download_path, exist_ok=True)
+            
+            target_path = os.path.join(download_path, file_name)
+            shutil.copy2(backup_file_path, target_path)
+            
+            print(f"Successfully downloaded backup file {file_name} to {target_path}")
+            
+            shutil.rmtree(temp_dir)
+            return target_path
+        else:
+            print(f"Error: Backup file {file_name} not found in GitHub repository")
+            shutil.rmtree(temp_dir)
+            return None
+    except Exception as e:
+        print(f"Error downloading backup file: {e}")
+        return None
+
+def download_anp_data(data_type="sales", location_type="state", frequency="monthly", download_path="./"):
     """
     Download data from various ANP URLs and organize it into specified folders.
+    If ANP website fails, try to download backup files from GitHub repository.
 
     Args:
     folder_paths (list of str, optional): A base path list that determines where to create folders for each data category. Defaults to ['dados', 'raw_data'].
+    data_type (str): Type of data to download ('sales', 'production', etc.)
+    location_type (str): Location granularity ('state', 'city')
+    frequency (str): Time frequency ('monthly', 'yearly')
 
-    This function iterates over a predefined dictionary of data categories and their corresponding URLs. For each category, it:
-    1. Constructs a path by joining the base folder paths with the category name.
-    2. Ensures the folder exists (using the `ensure_folder_exists` function).
-    3. Scrapes the page at the category's URL for file links (using the `scrape_for_file_links` function).
-    4. Downloads each file found to the constructed folder path (using the `download_file_directly` function).
-    5. If the file is a zip file, it is extracted and the zip file is deleted (using the `unzip_and_delete` function).
-
-    The function organizes downloaded files by their data categories into subdirectories within the specified base directory path. Each category has its own folder.
+    Returns:
+    tuple: (file_names, isUpdated) - List of downloaded file names and a boolean indicating if data is updated
     """
     folder_paths=['dados', 'raw_data']
     dic = {
@@ -445,18 +485,53 @@ def download_anp_data(data_type="sales", location_type="state", frequency="month
         'import_export': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/importacoes-e-exportacoes',
         'prices': 'https://www.gov.br/anp/pt-br/centrais-de-conteudo/dados-abertos/serie-historica-de-precos-de-combustiveis'
     }
-    folder_path = os.path.join(*folder_paths, data_type)
-    folder_path = ensure_folder_exists([folder_path])
-    url = dic[data_type]
-    links, file_names = scrape_for_file_links(url, data_type=data_type, frequency=frequency, location_type=location_type)
-    file_names = [file_name.replace("/", "-") + ".csv" for file_name in file_names]
-    if len(links) != len(file_names):
-        raise Exception("Problem loading url files from ANP website")
-    isUpdated = False
-    for i, link in enumerate(links):
-        isUpdated = download_file_directly(url=link, filename=file_names[i], folder=folder_path)
-        if '.zip' in link:
-            file_name = link.split('/')[-1]
-            unzip_and_delete(os.path.join(folder_path, file_name))
-    return file_names, isUpdated
+    
+    try:
+        folder_path = os.path.join(*folder_paths, data_type)
+        folder_path = ensure_folder_exists([folder_path])
+        url = dic[data_type]
+        links, file_names = scrape_for_file_links(url, data_type=data_type, frequency=frequency, location_type=location_type)
+        
+        if not links or not file_names:
+            raise Exception("No links or file names found from ANP website")
+            
+        file_names = [file_name.replace("/", "-") + ".csv" for file_name in file_names]
+        if len(links) != len(file_names):
+            raise Exception("Problem loading url files from ANP website")
+            
+        isUpdated = False
+        for i, link in enumerate(links):
+            isUpdated = download_file_directly(url=link, filename=file_names[i], folder=folder_path)
+            if '.zip' in link:
+                file_name = link.split('/')[-1]
+                unzip_and_delete(os.path.join(folder_path, file_name))
+        return file_names, isUpdated
+    
+    except Exception as e:
+        print(f"Failed to download data from ANP website: {e}")
+        print("Using backup data from GitHub repository instead...")
+        
+        # Map the parameters to the corresponding backup file name
+        backup_file_mapping = {
+            ('sales', 'state', 'monthly'): 'fuel_sales_state_monthly.tsf',
+            ('sales', 'state', 'yearly'): 'fuel_sales_state_yearly.tsf',
+            ('sales', 'city', 'yearly'): 'fuel_sales_city_yearly.tsf',
+            ('production', 'state', 'monthly'): 'oil_gas_operations_monthly_state.tsf'
+        }
+        
+        backup_file = backup_file_mapping.get((data_type, location_type, frequency))
+        
+        if not backup_file:
+            print(f"No backup file mapping for {data_type}, {location_type}, {frequency}")
+            return [], False
+            
+        # Try to download the backup file
+        backup_path = download_github_backup(backup_file, download_path=download_path)
+        
+        if backup_path:
+            # Return a dummy file name and False for isUpdated since we're using backup data
+            return [backup_file], False
+        else:
+            # If backup download also fails, return empty lists
+            return [], False
 # download_anp_data()

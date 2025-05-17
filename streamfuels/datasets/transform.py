@@ -577,7 +577,6 @@ def processar_dpee_ano_estado(download_path="./", filenames=[], data_prepared=Tr
         f.write(header + "\n")
         f.writelines("\n".join(series_lines))
     
-    print(f"dataset downloaded at: {tsf_path}")
     return tsf_path
   
 
@@ -715,7 +714,6 @@ def processar_derivados_municipio_ano(download_path = "./", filenames=[] , data_
         f.write(header + "\n")
         f.writelines("\n".join(series_lines))
     
-    print(f"dataset download at: {tsf_path}")     
     return tsf_path
     
     # pd.DataFrame(dic_series_excluidas).to_csv(os.path.join('dados', 'sales', 'series_municipio_anuais_excluidas.csv'), sep=';', index=False)
@@ -869,7 +867,6 @@ def processar_producao(download_path, filenames=[], data_prepared=True):
         f.write(header + "\n")
         f.writelines("\n".join(series_lines))
     
-    print(f"dataset downloaded at: {tsf_path}")
     return tsf_path
 
         #grande regiao

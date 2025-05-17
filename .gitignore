@@ -2,3 +2,5 @@ streamfuels.egg-info/
 __pycache__/
 streamfuels/__pycache__/
 streamfuels/datasets/__pycache__/
+dist
+build

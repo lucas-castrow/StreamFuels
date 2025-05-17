@@ -33,12 +33,26 @@ class DatasetLoader:
             str: Path to the processed TSF file.
             bool: If the dataset returned is the last update.
         """
-        filenames, isUpdated = download_anp_data(data_type="sales", location_type="state", frequency="monthly")
+        filenames, isUpdated = download_anp_data(data_type="sales", location_type="state", frequency="monthly", download_path=download_path)
+        
+        # Check if we got a backup .tsf file directly
+        if filenames and filenames[0].endswith('.tsf'):
+            # Backup file was used, return the path to it
+            backup_path = os.path.join(download_path, filenames[0])
+            if os.path.exists(backup_path):
+                print(f"Using backup dataset: {backup_path}")
+                return backup_path, isUpdated
+        
+        # If we have normal CSV files or backup file wasn't found
+        if not filenames:
+            print("Failed to get data files and backup was not available.")
+            return None, False
+            
         if len(filenames) > 1:
-            raise Exception("ANP website not working as expected")
+            print("Warning: Multiple files found from ANP website, using the first one.")
       
         tsf_path = processar_dpee_mes_estado(download_path, filenames=filenames, data_prepared=data_prepared)
-        print(f"dataset downloaded at: {tsf_path}")
+        print(f"Dataset downloaded at: {tsf_path}")
         return tsf_path, isUpdated
     
     @staticmethod
@@ -58,9 +72,23 @@ class DatasetLoader:
             str: Path to the processed TSF file.
             bool: If the dataset returned is the last update.
         """
-        filenames, isUpdated = download_anp_data(data_type="sales", location_type="state", frequency="yearly")
+        filenames, isUpdated = download_anp_data(data_type="sales", location_type="state", frequency="yearly", download_path=download_path)
+        
+        # Check if we got a backup .tsf file directly
+        if filenames and filenames[0].endswith('.tsf'):
+            # Backup file was used, return the path to it
+            backup_path = os.path.join(download_path, filenames[0])
+            if os.path.exists(backup_path):
+                print(f"Using backup dataset: {backup_path}")
+                return backup_path, isUpdated
+        
+        # If we have normal CSV files or backup file wasn't found
+        if not filenames:
+            print("Failed to get data files and backup was not available.")
+            return None, False
         
         tsf_path = processar_dpee_ano_estado(download_path, filenames=filenames, data_prepared=data_prepared)
+        print(f"Dataset downloaded at: {tsf_path}")
         return tsf_path, isUpdated
     
     @staticmethod
@@ -80,9 +108,23 @@ class DatasetLoader:
             str: Path to the processed TSF file.
             bool: If the dataset returned is the last update.
         """
-        filenames, isUpdated = download_anp_data(data_type="sales", location_type="city", frequency="yearly")
+        filenames, isUpdated = download_anp_data(data_type="sales", location_type="city", frequency="yearly", download_path=download_path)
+
+        # Check if we got a backup .tsf file directly
+        if filenames and filenames[0].endswith('.tsf'):
+            # Backup file was used, return the path to it
+            backup_path = os.path.join(download_path, filenames[0])
+            if os.path.exists(backup_path):
+                print(f"Using backup dataset: {backup_path}")
+                return backup_path, isUpdated
+        
+        # If we have normal CSV files or backup file wasn't found
+        if not filenames:
+            print("Failed to get data files and backup was not available.")
+            return None, False
 
         tsf_path = processar_derivados_municipio_ano(download_path=download_path, filenames=filenames, data_prepared= data_prepared)
+        print(f"Dataset downloaded at: {tsf_path}")
         return tsf_path, isUpdated
     
     
@@ -98,9 +140,23 @@ class DatasetLoader:
             str: Path to the processed TSF file.
             bool: If the dataset returned is the last update.
         """
-        filenames, isUpdated = download_anp_data(data_type="production", location_type="state", frequency="monthly")
+        filenames, isUpdated = download_anp_data(data_type="production", location_type="state", frequency="monthly", download_path=download_path)
+        
+        # Check if we got a backup .tsf file directly
+        if filenames and filenames[0].endswith('.tsf'):
+            # Backup file was used, return the path to it
+            backup_path = os.path.join(download_path, filenames[0])
+            if os.path.exists(backup_path):
+                print(f"Using backup dataset: {backup_path}")
+                return backup_path, isUpdated
+        
+        # If we have normal CSV files or backup file wasn't found
+        if not filenames:
+            print("Failed to get data files and backup was not available.")
+            return None, False
       
         tsf_path = processar_producao(download_path, filenames=filenames)
+        print(f"Dataset downloaded at: {tsf_path}")
         return tsf_path, isUpdated
         
     @staticmethod
@@ -146,32 +202,74 @@ class DatasetLoader:
     @staticmethod
     def fuel_type_classification(window_size=12, step=6, download_path='./'):
         filename = 'fuel_type_classification.tsf'
-        filenames, _ = download_anp_data(data_type="sales", location_type="state", frequency="monthly")
-        if len(filenames) > 1:
-            raise Exception("ANP website not working as expected")
-      
-        tsf_path = processar_dpee_mes_estado(download_path, filenames=filenames, data_prepared=True)
         
-        df, metadata = DatasetLoader.read_tsf(path_tsf=tsf_path)
-        targets = []
-        windows = []
-        for i in range(len(df)):
-            series = np.array(df.iloc[i]['series_value'])
-            target = df.iloc[i]['product']
-            for start in range(0, len(series) - window_size + 1, step):
-                window = znorm(series[start:start+window_size])
-                if not np.all(window) == 0:
-                    windows.append(window)
-                    targets.append(target)
-        data = np.array(windows)
-        n_features = data.shape[1]
-        column_names = [f't{i+1}' for i in range(n_features)]
-        df = pd.DataFrame(data, columns=column_names)
-        df['label'] = targets
-        df.to_csv(filename, index=False)
-        path = "/".join(tsf_path.split("/")[:-1])  
-        print(f"dataset downloaded at: {os.path.join(path, filename)}")
-        return df
+        # Try to download directly from GitHub first as a backup
+        from .extract import download_github_backup
+        backup_path = download_github_backup('fuel_type_classification.tsf', download_path=download_path)
+        
+        if backup_path:
+            print(f"Using backup dataset for fuel_type_classification: {backup_path}")
+            try:
+                df_backup = pd.read_csv(backup_path)
+                return df_backup
+            except Exception as e:
+                print(f"Error reading backup file: {e}")
+                print("Trying to generate from raw data...")
+        
+        # If backup failed or doesn't exist, try normal approach
+        try:
+            filenames, _ = download_anp_data(data_type="sales", location_type="state", frequency="monthly", download_path=download_path)
+            
+            # If we got a backup TSF file for monthly_sales_state
+            if filenames and filenames[0].endswith('.tsf') and 'monthly' in filenames[0]:
+                backup_path = os.path.join(download_path, filenames[0])
+                if os.path.exists(backup_path):
+                    print(f"Using backup sales dataset to generate classification: {backup_path}")
+                    tsf_path = backup_path
+                else:
+                    if not filenames:
+                        print("Failed to get data files and backup was not available.")
+                        return None
+                    if len(filenames) > 1:
+                        print("Warning: Multiple files found from ANP website, using the first one.")
+                    tsf_path = processar_dpee_mes_estado(download_path, filenames=filenames, data_prepared=True)
+            else:
+                if not filenames:
+                    print("Failed to get data files and backup was not available.")
+                    return None
+                if len(filenames) > 1:
+                    print("Warning: Multiple files found from ANP website, using the first one.")
+                tsf_path = processar_dpee_mes_estado(download_path, filenames=filenames, data_prepared=True)
+            
+            df, metadata = DatasetLoader.read_tsf(path_tsf=tsf_path)
+            targets = []
+            windows = []
+            for i in range(len(df)):
+                series = np.array(df.iloc[i]['series_value'])
+                target = df.iloc[i]['product']
+                for start in range(0, len(series) - window_size + 1, step):
+                    window = znorm(series[start:start+window_size])
+                    if not np.all(window) == 0:
+                        windows.append(window)
+                        targets.append(target)
+                        
+            if not windows or not targets:
+                raise Exception("Failed to create windows and targets for classification")
+                
+            data = np.array(windows)
+            n_features = data.shape[1]
+            column_names = [f't{i+1}' for i in range(n_features)]
+            df = pd.DataFrame(data, columns=column_names)
+            df['label'] = targets
+            
+            output_path = os.path.join(download_path, filename)
+            df.to_csv(output_path, index=False)
+            print(f"Dataset generated at: {output_path}")
+            return df
+            
+        except Exception as e:
+            print(f"Error generating fuel type classification: {e}")
+            return None
     
     @staticmethod
     def read_tsf(

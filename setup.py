@@ -14,19 +14,8 @@ setup(
         'setuptools',
         'tqdm==4.65.0'
     ],
-    extras_require={
-        #se houver incompatibilidade de versoes podemos fazer assim
-        # 'forecasters': [
-        #     'statsmodels>=0.12.0',  
-        #     'pandas>=1.2.0',       
-        # ],
-        # 'regressors': [
-        #     'scikit-learn>=0.24.0',
-        #     'matplotlib>=3.3.0',  
-        # ],
-    },
-    author='CENTRO INTEGRADO DE SOLUÇÕES EM INTELIGÊNCIA ARTIFICIAL',
-    author_email='streamfuels@example.com',
+    author='StreamFuels',
+    author_email='lucascstxv@gmail.com',
     description='Data processing and analysis tools for fuel market research',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
@@ -36,4 +25,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
+    python_requires='>=3.9',
+    license='MIT',
+    license_files='LICENSE',
 )
