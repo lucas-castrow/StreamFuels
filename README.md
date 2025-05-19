@@ -16,7 +16,8 @@ Yearly fuel sales data by city from ANP database
 ***monthly_operations_state()***: 
 Monthly oil production, NGL production, natural gas production, reinjection, flaring and losses, self-consumption, and available natural gas. It provides a comprehensive view of petroleum and gas operations.
   
-
+**fuel_type_classification()**
+Comprises 14,032 time series, each with a fixed length of 12 observations (i.e., one year of sales) and eight possible class labels.
 
 ## Installation
 
@@ -65,5 +66,10 @@ result, flag = loader.yearly_sales_city()
 ```
 ![image](https://github.com/user-attachments/assets/26ac0d96-73f9-43a8-b9bf-47106cafeba4)
 
+### Fuel Type Classification dataset
+```python
+df = loader.fuel_type_classification()
+```
+![image](https://github.com/user-attachments/assets/8308363d-8860-4952-9804-0cc631d0a47e)
 
 
