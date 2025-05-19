@@ -513,10 +513,10 @@ def download_anp_data(data_type="sales", location_type="state", frequency="month
         
         # Map the parameters to the corresponding backup file name
         backup_file_mapping = {
-            ('sales', 'state', 'monthly'): 'fuel_sales_state_monthly.tsf',
-            ('sales', 'state', 'yearly'): 'fuel_sales_state_yearly.tsf',
-            ('sales', 'city', 'yearly'): 'fuel_sales_city_yearly.tsf',
-            ('production', 'state', 'monthly'): 'oil_gas_operations_monthly_state.tsf'
+            ('sales', 'state', 'monthly'): 'monthly_fuel_sales_by_state.tsf',
+            ('sales', 'state', 'yearly'): 'yearly_fuel_sales_by_state.tsf',
+            ('sales', 'city', 'yearly'): 'yearly_fuel_sales_by_city.tsf',
+            ('production', 'state', 'monthly'): 'monthly_oil_gas_operations_by_state.tsf'
         }
         
         backup_file = backup_file_mapping.get((data_type, location_type, frequency))

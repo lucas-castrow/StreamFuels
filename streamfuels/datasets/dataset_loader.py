@@ -204,17 +204,17 @@ class DatasetLoader:
         filename = 'fuel_type_classification.tsf'
         
         # Try to download directly from GitHub first as a backup
-        from .extract import download_github_backup
-        backup_path = download_github_backup('fuel_type_classification.tsf', download_path=download_path)
+        # from .extract import download_github_backup
+        # backup_path = download_github_backup('fuel_type_classification.tsf', download_path=download_path)
         
-        if backup_path:
-            print(f"Using backup dataset for fuel_type_classification: {backup_path}")
-            try:
-                df_backup = pd.read_csv(backup_path)
-                return df_backup
-            except Exception as e:
-                print(f"Error reading backup file: {e}")
-                print("Trying to generate from raw data...")
+        # if backup_path:
+        #     print(f"Using backup dataset for fuel_type_classification: {backup_path}")
+        #     try:
+        #         df_backup = pd.read_csv(backup_path)
+        #         return df_backup
+        #     except Exception as e:
+        #         print(f"Error reading backup file: {e}")
+        #         print("Trying to generate from raw data...")
         
         # If backup failed or doesn't exist, try normal approach
         try:

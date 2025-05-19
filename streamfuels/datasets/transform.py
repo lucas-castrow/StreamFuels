@@ -412,8 +412,7 @@ def processar_dpee_mes_estado(download_path="./", filenames=[], data_prepared=Tr
 # This dataset contains {len_series} monthly time series provided by ANP and cleaned by CISIA.
 #
 # For more details, please refer to
-# Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2020. The m4 competition: 100,000 time series and 61 forecasting methods. International Journal of Forecasting 36 (1), 54–74.
-# Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2018. The m4 competition: results, findings, conclusion and way forward, International Journal of Forecasting 34 (4), 802–808.
+# Castro, L.G.M., Ribeiro, A.G.R., Barddal, J.P., Britto Jr, A.S., Souza, V.M.A., 2025. StreamFuels: Continuosly Updated Fuel Sales Datasets for Forecasting, Classification, and Pattern Analysis. Scientific Data.
 #
 @relation CISIA-ANP
 @attribute series_name string
@@ -558,8 +557,7 @@ def processar_dpee_ano_estado(download_path="./", filenames=[], data_prepared=Tr
 # This dataset contains {len_series} yearly time series provided by ANP and cleaned by CISIA.
 #
 # For more details, please refer to
-# Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2020. The m4 competition: 100,000 time series and 61 forecasting methods. International Journal of Forecasting 36 (1), 54–74.
-# Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2018. The m4 competition: results, findings, conclusion and way forward, International Journal of Forecasting 34 (4), 802–808.
+# Castro, L.G.M., Ribeiro, A.G.R., Barddal, J.P., Britto Jr, A.S., Souza, V.M.A., 2025. StreamFuels: Continuosly Updated Fuel Sales Datasets for Forecasting, Classification, and Pattern Analysis. Scientific Data.
 #
 @relation CISIA-ANP
 @attribute series_name string
@@ -694,8 +692,7 @@ def processar_derivados_municipio_ano(download_path = "./", filenames=[] , data_
 # This dataset contains {len_series} yearly time series from cities in BRAZIL related to derivatives petroleum sales provided by ANP and cleaned by CISIA.
 #
 # For more details, please refer to
-# Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2020. The m4 competition: 100,000 time series and 61 forecasting methods. International Journal of Forecasting 36 (1), 54–74.
-# Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2018. The m4 competition: results, findings, conclusion and way forward, International Journal of Forecasting 34 (4), 802–808.
+# Castro, L.G.M., Ribeiro, A.G.R., Barddal, J.P., Britto Jr, A.S., Souza, V.M.A., 2025. StreamFuels: Continuosly Updated Fuel Sales Datasets for Forecasting, Classification, and Pattern Analysis. Scientific Data.
 #
 @relation CISIA-ANP
 @attribute series_name string
@@ -754,7 +751,7 @@ def processar_producao(download_path, filenames=[], data_prepared=True):
     resultado_final = pd.DataFrame()
     series_lines = []
     index = 0
-    nome_arquivo = f"monthly_oilgas_operations_by_state.tsf"
+    nome_arquivo = f"monthly_oil_gas_operations_by_state.tsf"
     for filename in filenames:
         df = pd.read_csv(os.path.join(load_path, filename), sep=';')
         df_resultante = pd.DataFrame()
@@ -847,8 +844,7 @@ def processar_producao(download_path, filenames=[], data_prepared=True):
 # This dataset contains {len_series} monthly time series provided by ANP and cleaned by CISIA.
 #
 # For more details, please refer to
-# Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2020. The m4 competition: 100,000 time series and 61 forecasting methods. International Journal of Forecasting 36 (1), 54–74.
-# Makridakis, S., Spiliotis, E., Assimakopoulos, V., 2018. The m4 competition: results, findings, conclusion and way forward, International Journal of Forecasting 34 (4), 802–808.
+# Castro, L.G.M., Ribeiro, A.G.R., Barddal, J.P., Britto Jr, A.S., Souza, V.M.A., 2025. StreamFuels: Continuosly Updated Fuel Sales Datasets for Forecasting, Classification, and Pattern Analysis. Scientific Data.
 #
 @relation CISIA-ANP
 @attribute series_name string
