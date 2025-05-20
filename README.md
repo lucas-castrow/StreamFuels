@@ -70,6 +70,25 @@ result, flag = loader.yearly_sales_city()
 ```python
 df = loader.fuel_type_classification()
 ```
-![image](https://github.com/user-attachments/assets/8308363d-8860-4952-9804-0cc631d0a47e)
+![image](https://github.com/user-attachments/assets/d3b6f550-3435-48b7-873c-5be0bd658b96)
 
 
+## 📚 Interactive Example Notebooks
+
+You can explore practical use cases of the library directly via Binder:
+
+- **🔍 Fuel Type Classification**  
+  Demonstrates how to use classification algorithms to identify the fuel type.  
+  [![Open in Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/lucas-castrow/StreamFuels/HEAD?urlpath=%2Fdoc%2Ftree%2Fexamples%2FClassification.ipynb)
+
+- **📈 Time Series Forecasting**  
+  Shows how to perform time series forecasting using statistical and machine learning models.  
+  [![Open in Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/lucas-castrow/StreamFuels/HEAD?urlpath=%2Fdoc%2Ftree%2Fexamples%2FForecasting.ipynb)
+
+- **📊 Dataset Loading and Visualization**  
+  Explains how to load datasets and visualize key information graphically.  
+  [![Open in Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/lucas-castrow/StreamFuels/HEAD?urlpath=%2Fdoc%2Ftree%2Fexamples%2FLoad+datatasets+and+visualization.ipynb)
+
+- **🧠 Motif Discovery and Visualization**  
+  Demonstrates how to identify and visualize repeating patterns (motifs) in time series data.  
+  [![Open in Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/lucas-castrow/StreamFuels/HEAD?urlpath=%2Fdoc%2Ftree%2Fexamples%2FMotif+discovery.ipynb)
